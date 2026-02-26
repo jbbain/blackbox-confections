@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium minimal base */
+:root{
+  color-scheme: light;
+}
+html.dark{
+  color-scheme: dark;
+}
+
+::selection{
+  background: rgba(210,4,45,0.25);
+}
+
+@layer components{
+  .bb-container{ @apply mx-auto w-full max-w-6xl px-4; }
+  .bb-card{ @apply border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm; }
+  .bb-btn{ @apply inline-flex items-center justify-center gap-2 px-4 py-2 border border-black/15 dark:border-white/15 rounded-none text-sm tracking-wide uppercase; }
+  .bb-btn-primary{ @apply bg-ink text-bone border-ink dark:bg-bone dark:text-ink dark:border-bone; }
+  .bb-btn-accent{ @apply bg-cherry text-bone border-cherry; }
+  .bb-input{ @apply w-full rounded-none border border-black/15 dark:border-white/15 bg-transparent px-3 py-2 outline-none focus:border-cherry; }
+  .bb-label{ @apply text-xs uppercase tracking-widest opacity-80; }
+  .bb-h1{ @apply font-display text-4xl md:text-6xl tracking-tight; }
+  .bb-h2{ @apply font-display text-2xl md:text-3xl tracking-tight; }
+  .bb-muted{ @apply opacity-80; }
+  .bb-divider{ @apply h-px w-full bg-black/10 dark:bg-white/10; }
+}
