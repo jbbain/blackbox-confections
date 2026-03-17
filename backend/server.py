@@ -1,5 +1,8 @@
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.config import settings
 from app.db import Base, engine, SessionLocal
 from app.routes import router
@@ -15,14 +18,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
-    # seed starter content
     db = SessionLocal()
     try:
-        seed(db)
+      seed(db)
     finally:
-        db.close()
+      db.close()
 
 app.include_router(router, prefix="/api")

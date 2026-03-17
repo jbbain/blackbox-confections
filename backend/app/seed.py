@@ -36,27 +36,122 @@ def seed(db: Session):
 
     gallery = [
         models.GalleryItem(
-            image_url="https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1200&q=80",
-            caption="Signature ganache pour.",
+            image_url="/static/gallery/aka-cake.jpeg",
+            caption="Custom AKA celebration cake with signature pink and green detailing, crest artwork, pearls, and luxury fondant accents.",
             sort_order=1,
         ),
         models.GalleryItem(
-            image_url="https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=1200&q=80",
-            caption="Cherry accents. Pure luxury.",
+            image_url="/static/gallery/law-order-cake.jpeg",
+            caption="Bold Law & Order themed two-tier custom cake with dramatic fondant crime-scene tape styling and statement birthday details.",
             sort_order=2,
         ),
         models.GalleryItem(
-            image_url="https://images.unsplash.com/photo-1551106652-a5bcf4b29ab6?auto=format&fit=crop&w=1200&q=80",
-            caption="Minimalist plating, maximum flavor.",
+            image_url="/static/gallery/mickey-cake.jpeg",
+            caption="Whimsical Mickey-inspired birthday cake with playful fondant architecture, bright color blocking, and custom name toppers.",
             sort_order=3,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_0635.jpeg",
+            caption="ACT XXXV celebration cake with rich color blocking, metallic detailing, and custom Roman numeral topper.",
+            sort_order=4,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_1012.jpeg",
+            caption="Luxury letter cake finished with strawberries, Ferrero Rocher, raspberries, and elegant piped buttercream.",
+            sort_order=5,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_1102.jpeg",
+            caption="Custom JKS themed two-tier cake with bold graphic styling and fondant portrait details.",
+            sort_order=6,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_2665.jpeg",
+            caption="Regal black and gold cake with crown topper, honeycomb accents, and luxury painted textures.",
+            sort_order=7,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_2955.jpeg",
+            caption="Metro bus themed custom cake with handcrafted fondant vehicle detailing and bold lettering.",
+            sort_order=8,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_2995.jpeg",
+            caption="Warm autumn-inspired cake with vibrant orange and yellow buttercream florals and a soft seasonal finish.",
+            sort_order=9,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_4638.jpeg",
+            caption="Pink beauty-themed cake with gold scissors, florals, and elegant salon-inspired details.",
+            sort_order=10,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_5283.jpeg",
+            caption="Gaming-inspired two-tier birthday cake featuring custom console and video game artwork.",
+            sort_order=11,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_5671.jpeg",
+            caption="Music-inspired custom photo cake with bold black buttercream piping and artist collage panels.",
+            sort_order=12,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_5880.jpeg",
+            caption="Fortnite themed pull-apart cupcake cake with handcrafted edible game elements and playful terrain styling.",
+            sort_order=13,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_6798.jpeg",
+            caption="Elegant floral wedding cake set with cascading pink blossoms and a timeless romantic finish.",
+            sort_order=14,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_7453.jpeg",
+            caption="Minimal lavender birthday cake with soft textures and sleek modern presentation.",
+            sort_order=15,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_7622.jpeg",
+            caption="Luxury teal and gold tiered cake with orchid florals, metallic drip, and elevated event styling.",
+            sort_order=16,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_8038.jpeg",
+            caption="Royal blue princess-themed cake with gold castle silhouette and elegant storybook-inspired details.",
+            sort_order=17,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_9054.jpeg",
+            caption="Rosette birthday cake in romantic pink tones with soft floral piping and a classic celebration finish.",
+            sort_order=18,
+        ),
+        models.GalleryItem(
+            image_url="/static/gallery/IMG_9110.jpeg",
+            caption="Vibrant tropical birthday cake with palm leaves, flamingo accents, and bold sunset-inspired color.",
+            sort_order=19,
         ),
     ]
     db.add_all(gallery)
 
     reviews = [
-        models.Review(name="Alicia", rating=5, message="The Black Velvet slice is unreal. Rich, not too sweet.", approved=True),
-        models.Review(name="Marcus", rating=5, message="Macarons were delicate and perfectly balanced. Premium experience.", approved=True),
-        models.Review(name="Sasha", rating=4, message="Brownies were fudgy with that perfect crackle. Will order again.", approved=True),
+        models.Review(
+            name="Alicia",
+            rating=5,
+            message="The Black Velvet slice is unreal. Rich, not too sweet.",
+            approved=True
+        ),
+        models.Review(
+            name="Marcus",
+            rating=5,
+            message="Macarons were delicate and perfectly balanced. Premium experience.",
+            approved=True
+        ),
+        models.Review(
+            name="Sasha",
+            rating=4,
+            message="Brownies were fudgy with that perfect crackle. Will order again.",
+            approved=True
+        ),
     ]
     db.add_all(reviews)
     db.commit()
