@@ -1,9 +1,9 @@
 # BlackBox Confections (Full Stack)
 
 Luxurious, minimal, premium red/black/white bakery site with:
-- Pages: Home, About, Gallery, Contact, Products, Cart, Admin Dashboard
+- Pages: Home, About, Gallery, Contact, Orde
 - Dark mode toggle
-- Online ordering/cart (no payments/auth yet)
+- Online ordering (no payments/auth yet)
 - Customer testimonials (Reviews)
 - Admin CRUD: Products, Orders, Reviews, Gallery, Contact inbox
 - Backend: FastAPI + SQLite + SQLAlchemy (CRUD endpoints)

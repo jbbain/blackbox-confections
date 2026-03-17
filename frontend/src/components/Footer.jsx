@@ -17,7 +17,6 @@ export default function Footer() {
             <Link to="/products" className="hover:text-cherry">Order</Link>
             <Link to="/gallery" className="hover:text-cherry">Gallery</Link>
             <Link to="/contact" className="hover:text-cherry">Contact</Link>
-            <Link to="/admin" className="hover:text-cherry">Admin</Link>
           </div>
         </div>
         <div>

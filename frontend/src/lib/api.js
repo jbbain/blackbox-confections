@@ -1,26 +1,36 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
+const API_BASE =
+  import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
+
+export const ASSET_BASE = API_BASE.replace('/api', '')
+
+export function resolveImageUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http') || path.startsWith('data:')) return path
+  return `${ASSET_BASE}${path}`
+}
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    },
     ...options
   })
+
   if (!res.ok) {
     let msg = 'Request failed'
-    try { msg = (await res.json()).detail || msg } catch {}
+    try {
+      msg = (await res.json()).detail || msg
+    } catch {}
     throw new Error(msg)
   }
+
   return res.json()
 }
 
 export const api = {
-  // products
-  listProducts: (activeOnly = true) => request(`/products?active_only=${activeOnly}`),
-  createProduct: (body) => request('/products', { method: 'POST', body: JSON.stringify(body) }),
-  updateProduct: (id, body) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
-
-  // orders
+  // orders (custom requests)
   listOrders: () => request('/orders'),
   createOrder: (body) => request('/orders', { method: 'POST', body: JSON.stringify(body) }),
   updateOrder: (id, body) => request(`/orders/${id}`, { method: 'PUT', body: JSON.stringify(body) }),

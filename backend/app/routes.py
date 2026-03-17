@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .db import get_db
-from . import crud, schemas, models
+from . import crud, schemas
+from .emailer import send_order_email, send_contact_email
 
 router = APIRouter()
 
@@ -42,30 +43,22 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 # -------- Orders --------
 @router.get("/orders", response_model=list[schemas.OrderOut])
 def list_orders(db: Session = Depends(get_db)):
-    orders = crud.list_orders(db)
-    # enrich item product_name
-    for o in orders:
-        for it in o.items:
-            it.product_name = it.product.name if it.product else None
-    return orders
+    return crud.list_orders(db)
 
 @router.get("/orders/{order_id}", response_model=schemas.OrderOut)
 def get_order(order_id: int, db: Session = Depends(get_db)):
     obj = crud.get_order(db, order_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Order not found")
-    for it in obj.items:
-        it.product_name = it.product.name if it.product else None
     return obj
 
 @router.post("/orders", response_model=schemas.OrderOut)
-def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db)):
+async def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db)):
+    obj = crud.create_order(db, data)
     try:
-        obj = crud.create_order(db, data)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    for it in obj.items:
-        it.product_name = it.product.name if it.product else None
+        await send_order_email(obj)
+    except Exception as e:
+        print(f"Failed to send order email: {e}")
     return obj
 
 @router.put("/orders/{order_id}", response_model=schemas.OrderOut)
@@ -73,8 +66,6 @@ def update_order(order_id: int, data: schemas.OrderUpdate, db: Session = Depends
     obj = crud.update_order(db, order_id, data)
     if not obj:
         raise HTTPException(status_code=404, detail="Order not found")
-    for it in obj.items:
-        it.product_name = it.product.name if it.product else None
     return obj
 
 @router.delete("/orders/{order_id}")
@@ -136,8 +127,13 @@ def list_contacts(db: Session = Depends(get_db)):
     return crud.list_contacts(db)
 
 @router.post("/contact", response_model=schemas.ContactOut)
-def create_contact(data: schemas.ContactCreate, db: Session = Depends(get_db)):
-    return crud.create_contact(db, data)
+async def create_contact(data: schemas.ContactCreate, db: Session = Depends(get_db)):
+    obj = crud.create_contact(db, data)
+    try:
+        await send_contact_email(obj)
+    except Exception as e:
+        print(f"Failed to send contact email: {e}")
+    return obj
 
 @router.delete("/contacts/{contact_id}")
 def delete_contact(contact_id: int, db: Session = Depends(get_db)):

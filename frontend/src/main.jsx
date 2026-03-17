@@ -4,16 +4,16 @@ import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ThemeProvider } from './state/theme'
-import { CartProvider } from './state/cart'
+import { AdminAuthProvider } from './state/adminAuth'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </CartProvider>
+      <AdminAuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+      </AdminAuthProvider>
     </ThemeProvider>
   </React.StrictMode>
 )

@@ -1,10 +1,7 @@
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-# -----------------
-# Products
-# -----------------
 class ProductBase(BaseModel):
     name: str = Field(..., max_length=200)
     description: str = ""
@@ -12,6 +9,9 @@ class ProductBase(BaseModel):
     image_url: str = ""
     category: str = "Baked Goods"
     is_active: bool = True
+    image_scale: float = Field(1.0, gt=0)
+    image_x: float = 0.0
+    image_y: float = 0.0
 
 class ProductCreate(ProductBase):
     pass
@@ -23,6 +23,9 @@ class ProductUpdate(BaseModel):
     image_url: Optional[str] = None
     category: Optional[str] = None
     is_active: Optional[bool] = None
+    image_scale: Optional[float] = Field(None, gt=0)
+    image_x: Optional[float] = None
+    image_y: Optional[float] = None
 
 class ProductOut(ProductBase):
     id: int
@@ -30,54 +33,43 @@ class ProductOut(ProductBase):
     class Config:
         from_attributes = True
 
-# -----------------
-# Orders
-# -----------------
-class OrderItemIn(BaseModel):
-    product_id: int
-    quantity: int = Field(1, ge=1)
-
-class OrderItemOut(BaseModel):
-    id: int
-    product_id: int
-    quantity: int
-    unit_price: float
-    product_name: Optional[str] = None
-    class Config:
-        from_attributes = True
-
 class OrderBase(BaseModel):
     customer_name: str
     customer_email: EmailStr
     customer_phone: str = ""
-    fulfillment_type: str = Field("pickup", pattern="^(pickup|delivery)$")
-    address: str = ""
-    notes: str = ""
+    event_type: str = ""
+    dessert_type: str = ""
+    servings: str = ""
+    event_date: str = ""
+    pickup_or_delivery: str = "pickup"
+    color_theme: str = ""
+    flavor_preferences: str = ""
+    inspiration_notes: str = ""
 
 class OrderCreate(OrderBase):
-    items: List[OrderItemIn]
+    pass
 
 class OrderUpdate(BaseModel):
     customer_name: Optional[str] = None
     customer_email: Optional[EmailStr] = None
     customer_phone: Optional[str] = None
-    fulfillment_type: Optional[str] = Field(None, pattern="^(pickup|delivery)$")
-    address: Optional[str] = None
-    notes: Optional[str] = None
+    event_type: Optional[str] = None
+    dessert_type: Optional[str] = None
+    servings: Optional[str] = None
+    event_date: Optional[str] = None
+    pickup_or_delivery: Optional[str] = None
+    color_theme: Optional[str] = None
+    flavor_preferences: Optional[str] = None
+    inspiration_notes: Optional[str] = None
     status: Optional[str] = Field(None, pattern="^(new|in_progress|ready|completed|cancelled)$")
 
 class OrderOut(OrderBase):
     id: int
     status: str
-    total: float
     created_at: datetime
-    items: List[OrderItemOut] = []
     class Config:
         from_attributes = True
 
-# -----------------
-# Reviews
-# -----------------
 class ReviewBase(BaseModel):
     name: str
     rating: int = Field(5, ge=1, le=5)
@@ -99,9 +91,6 @@ class ReviewOut(ReviewBase):
     class Config:
         from_attributes = True
 
-# -----------------
-# Gallery
-# -----------------
 class GalleryBase(BaseModel):
     image_url: str
     caption: str = ""
@@ -121,9 +110,6 @@ class GalleryOut(GalleryBase):
     class Config:
         from_attributes = True
 
-# -----------------
-# Contact
-# -----------------
 class ContactCreate(BaseModel):
     name: str
     email: EmailStr

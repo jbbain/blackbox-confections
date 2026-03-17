@@ -3,13 +3,11 @@ import Section from '../components/Section'
 import ProductCard from '../components/ProductCard'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
-import { useCart } from '../state/cart'
 
 export default function Products() {
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
-  const { items } = useCart()
 
   useEffect(() => {
     (async () => {
@@ -41,7 +39,6 @@ export default function Products() {
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
-            <Link className="bb-btn bb-btn-accent" to="/cart">Go to cart ({items.length})</Link>
           </div>
 
           {error && <div className="mt-6 text-sm text-cherry">{error}</div>}

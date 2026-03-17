@@ -1,6 +1,5 @@
 import React from 'react'
 import { NavLink, Link } from 'react-router-dom'
-import { useCart } from '../state/cart'
 import { useTheme } from '../state/theme'
 import logo from '../images/black-box-confections-logo.png'
 
@@ -8,7 +7,6 @@ const navLinkClass = ({ isActive }) =>
   `text-xs uppercase tracking-widest hover:text-cherry transition ${isActive ? 'text-cherry' : 'opacity-80'}`
 
 export default function Navbar() {
-  const { items } = useCart()
   const { mode, toggle } = useTheme()
 
   return (
@@ -28,18 +26,14 @@ export default function Navbar() {
           <NavLink to="/" className={navLinkClass}>Home</NavLink>
           <NavLink to="/about" className={navLinkClass}>About</NavLink>
           <NavLink to="/gallery" className={navLinkClass}>Gallery</NavLink>
-          <NavLink to="/products" className={navLinkClass}>Order</NavLink>
+          <NavLink to="/order" className={navLinkClass}>Custom Order</NavLink>
           <NavLink to="/contact" className={navLinkClass}>Contact</NavLink>
-          <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>
         </nav>
 
         <div className="flex items-center gap-3">
           <button onClick={toggle} className="bb-btn" title="Toggle theme">
             {mode === 'dark' ? 'Light' : 'Dark'}
           </button>
-          <Link to="/cart" className="bb-btn bb-btn-accent">
-            Cart <span className="text-xs opacity-90">({items.length})</span>
-          </Link>
         </div>
       </div>
     </header>
