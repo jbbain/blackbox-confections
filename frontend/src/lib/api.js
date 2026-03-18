@@ -2,7 +2,7 @@ const API_BASE =
   import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
 
 export const ASSET_BASE = API_BASE.replace('/api', '')
-
+console.log('API_BASE:', API_BASE)
 export function resolveImageUrl(path) {
   if (!path) return ''
   if (path.startsWith('http') || path.startsWith('data:')) return path
@@ -10,6 +10,7 @@ export function resolveImageUrl(path) {
 }
 
 async function request(path, options = {}) {
+  console.log('API request about to fire', `${API_BASE}${path}`, options)
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',

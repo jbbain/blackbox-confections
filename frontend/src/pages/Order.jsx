@@ -21,6 +21,7 @@ export default function Order() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
+    console.log('Order form submit fired', form)
     setStatus({ kind: '', msg: '' })
 
     try {
@@ -40,6 +41,7 @@ export default function Order() {
         flavor_preferences: ''
       })
     } catch (e) {
+      console.error('Order submit error', e);
       setStatus({ kind: 'err', msg: e.message || 'Failed to submit order request.' })
     }
   }
