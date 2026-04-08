@@ -36,7 +36,7 @@ class ProductOut(ProductBase):
 class OrderBase(BaseModel):
     customer_name: str
     customer_email: EmailStr
-    customer_phone: str = ""
+    customer_phone: str = Field(..., pattern=r"^\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}$")
     event_type: str = ""
     dessert_type: str = ""
     servings: str = ""

@@ -4,10 +4,14 @@ import { api } from '../lib/api'
 
 export default function Order() {
   const [form, setForm] = useState({
-    customer_name: '',
+    prefix: '',
+    first_name: '',
+    last_name: '',
+    suffix: '',
     customer_email: '',
     customer_phone: '',
     event_type: '',
+    custom_event_type: '',
     dessert_type: '',
     servings: '',
     event_date: '',
@@ -18,20 +22,75 @@ export default function Order() {
   })
 
   const [status, setStatus] = useState({ kind: '', msg: '' })
+  const [errors, setErrors] = useState({})
+
+  const validate = () => {
+    const errs = {}
+    if (!form.first_name.trim()) errs.first_name = 'First name is required.'
+    if (!form.last_name.trim()) errs.last_name = 'Last name is required.'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+    if (!form.customer_email.trim()) {
+      errs.customer_email = 'Email is required.'
+    } else if (!emailRegex.test(form.customer_email)) {
+      errs.customer_email = 'Please enter a valid email address (e.g. name@example.com).'
+    }
+    const phoneDigits = form.customer_phone.replace(/\D/g, '')
+    if (!form.customer_phone.trim()) {
+      errs.customer_phone = 'Phone number is required.'
+    } else if (phoneDigits.length !== 10) {
+      errs.customer_phone = 'Please enter a valid 10-digit US phone number.'
+    }
+    if (form.event_type === 'Other' && !form.custom_event_type.trim()) {
+      errs.custom_event_type = 'Please specify your event type.'
+    }
+    return errs
+  }
+
+  const formatPhone = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
     console.log('Order form submit fired', form)
     setStatus({ kind: '', msg: '' })
 
+    const validationErrors = validate()
+    setErrors(validationErrors)
+    if (Object.keys(validationErrors).length > 0) return
+
     try {
-      await api.createOrder(form)
+      const payload = { ...form }
+      const nameParts = [
+        payload.prefix,
+        payload.first_name.trim(),
+        payload.last_name.trim(),
+        payload.suffix
+      ].filter(Boolean)
+      payload.customer_name = nameParts.join(' ')
+      delete payload.prefix
+      delete payload.first_name
+      delete payload.last_name
+      delete payload.suffix
+      if (payload.event_type === 'Other' && payload.custom_event_type.trim()) {
+        payload.event_type = payload.custom_event_type.trim()
+      }
+      delete payload.custom_event_type
+      await api.createOrder(payload)
+      setErrors({})
       setStatus({ kind: 'ok', msg: 'Your custom order request has been submitted.' })
       setForm({
-        customer_name: '',
+        prefix: '',
+        first_name: '',
+        last_name: '',
+        suffix: '',
         customer_email: '',
         customer_phone: '',
         event_type: '',
+        custom_event_type: '',
         dessert_type: '',
         servings: '',
         event_date: '',
@@ -60,38 +119,89 @@ export default function Order() {
       </section>
 
       <Section eyebrow="Order Request" title="Let’s create something unforgettable.">
-        <form onSubmit={onSubmit} className="max-w-3xl space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <div className="bb-label mb-2">Name</div>
-              <input
+        <form onSubmit={onSubmit} noValidate className="max-w-3xl space-y-4">
+          <div className="flex flex-wrap gap-4">
+            <div className="w-24 shrink-0">
+              <div className="bb-label mb-2">Prefix</div>
+              <select
                 className="bb-input"
-                value={form.customer_name}
-                onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
-                required
-              />
+                value={form.prefix}
+                onChange={(e) => setForm({ ...form, prefix: e.target.value })}
+              >
+                <option value=""></option>
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Ms.">Ms.</option>
+                <option value="Mx.">Mx.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Prof.">Prof.</option>
+                <option value="Rev.">Rev.</option>
+                <option value="Hon.">Hon.</option>
+              </select>
             </div>
-            <div>
-              <div className="bb-label mb-2">Email</div>
+            <div className="flex-1 min-w-[140px]">
+              <div className="bb-label mb-2">First Name <span className="text-cherry">*</span></div>
               <input
-                type="email"
-                className="bb-input"
-                value={form.customer_email}
-                onChange={(e) => setForm({ ...form, customer_email: e.target.value })}
-                required
+                className={`bb-input ${errors.first_name ? 'border-cherry' : ''}`}
+                value={form.first_name}
+                onChange={(e) => { setForm({ ...form, first_name: e.target.value }); setErrors({ ...errors, first_name: '' }) }}
               />
+              {errors.first_name && <p className="text-cherry text-xs mt-1">{errors.first_name}</p>}
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <div className="bb-label mb-2">Last Name <span className="text-cherry">*</span></div>
+              <input
+                className={`bb-input ${errors.last_name ? 'border-cherry' : ''}`}
+                value={form.last_name}
+                onChange={(e) => { setForm({ ...form, last_name: e.target.value }); setErrors({ ...errors, last_name: '' }) }}
+              />
+              {errors.last_name && <p className="text-cherry text-xs mt-1">{errors.last_name}</p>}
+            </div>
+            <div className="w-24 shrink-0">
+              <div className="bb-label mb-2">Suffix</div>
+              <select
+                className="bb-input"
+                value={form.suffix}
+                onChange={(e) => setForm({ ...form, suffix: e.target.value })}
+              >
+                <option value=""></option>
+                <option value="Jr.">Jr.</option>
+                <option value="Sr.">Sr.</option>
+                <option value="II">II</option>
+                <option value="III">III</option>
+                <option value="IV">IV</option>
+                <option value="Esq.">Esq.</option>
+                <option value="PhD">PhD</option>
+                <option value="MD">MD</option>
+              </select>
             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <div className="bb-label mb-2">Phone</div>
+              <div className="bb-label mb-2">Email <span className="text-cherry">*</span></div>
               <input
-                className="bb-input"
-                value={form.customer_phone}
-                onChange={(e) => setForm({ ...form, customer_phone: e.target.value })}
+                type="email"
+                className={`bb-input ${errors.customer_email ? 'border-cherry' : ''}`}
+                value={form.customer_email}
+                onChange={(e) => { setForm({ ...form, customer_email: e.target.value }); setErrors({ ...errors, customer_email: '' }) }}
               />
+              {errors.customer_email && <p className="text-cherry text-xs mt-1">{errors.customer_email}</p>}
             </div>
+            <div>
+              <div className="bb-label mb-2">Phone <span className="text-cherry">*</span></div>
+              <input
+                type="tel"
+                className={`bb-input ${errors.customer_phone ? 'border-cherry' : ''}`}
+                placeholder="(555) 123-4567"
+                value={form.customer_phone}
+                onChange={(e) => { setForm({ ...form, customer_phone: formatPhone(e.target.value) }); setErrors({ ...errors, customer_phone: '' }) }}
+              />
+              {errors.customer_phone && <p className="text-cherry text-xs mt-1">{errors.customer_phone}</p>}
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <div className="bb-label mb-2">Event Date</div>
               <input
@@ -101,9 +211,6 @@ export default function Order() {
                 onChange={(e) => setForm({ ...form, event_date: e.target.value })}
               />
             </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <div className="bb-label mb-2">Event Type</div>
               <select
@@ -120,8 +227,21 @@ export default function Order() {
                 <option value="Graduation">Graduation</option>
                 <option value="Other">Other</option>
               </select>
+              {form.event_type === 'Other' && (
+                <>
+                  <input
+                    className={`bb-input mt-2 ${errors.custom_event_type ? 'border-cherry' : ''}`}
+                    placeholder="Please specify your event type"
+                    value={form.custom_event_type}
+                    onChange={(e) => { setForm({ ...form, custom_event_type: e.target.value }); setErrors({ ...errors, custom_event_type: '' }) }}
+                  />
+                  {errors.custom_event_type && <p className="text-cherry text-xs mt-1">{errors.custom_event_type}</p>}
+                </>
+              )}
             </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <div className="bb-label mb-2">Dessert Type</div>
               <select
@@ -138,9 +258,6 @@ export default function Order() {
                 <option value="Dessert Table">Dessert Table</option>
               </select>
             </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <div className="bb-label mb-2">Estimated Servings</div>
               <input
@@ -150,7 +267,9 @@ export default function Order() {
                 placeholder="Ex. 25-30"
               />
             </div>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-4">
             <div>
               <div className="bb-label mb-2">Pickup or Delivery</div>
               <select
@@ -162,26 +281,27 @@ export default function Order() {
                 <option value="delivery">Delivery</option>
               </select>
             </div>
+            <div>
+              <div className="bb-label mb-2">Color Theme</div>
+              <input
+                className="bb-input"
+                value={form.color_theme}
+                onChange={(e) => setForm({ ...form, color_theme: e.target.value })}
+                placeholder="Ex. Blush pink, gold, ivory"
+              />
+            </div>
           </div>
 
-          <div>
-            <div className="bb-label mb-2">Color Theme</div>
-            <input
-              className="bb-input"
-              value={form.color_theme}
-              onChange={(e) => setForm({ ...form, color_theme: e.target.value })}
-              placeholder="Ex. Blush pink, gold, ivory"
-            />
-          </div>
-
-          <div>
-            <div className="bb-label mb-2">Flavor Preferences</div>
-            <input
-              className="bb-input"
-              value={form.flavor_preferences}
-              onChange={(e) => setForm({ ...form, flavor_preferences: e.target.value })}
-              placeholder="Ex. Vanilla bean, strawberry crunch, chocolate ganache"
-            />
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <div className="bb-label mb-2">Flavor Preferences</div>
+              <input
+                className="bb-input"
+                value={form.flavor_preferences}
+                onChange={(e) => setForm({ ...form, flavor_preferences: e.target.value })}
+                placeholder="Ex. Vanilla bean, strawberry crunch, chocolate ganache"
+              />
+            </div>
           </div>
 
           <div>
@@ -198,6 +318,12 @@ export default function Order() {
             <button className="bb-btn bb-btn-accent" type="submit">
               Submit Request
             </button>
+
+            {Object.keys(errors).length > 0 && (
+              <div className="text-cherry text-sm font-medium">
+                Please fix the highlighted fields above.
+              </div>
+            )}
 
             {status.msg && (
               <div className={`text-sm ${status.kind === 'ok' ? 'opacity-80' : 'text-cherry'}`}>
