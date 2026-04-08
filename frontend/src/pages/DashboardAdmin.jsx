@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
+import 'highcharts/highcharts-3d'
+import 'highcharts/modules/map'
+import 'highcharts/modules/funnel'
+import 'highcharts/modules/variable-pie'
+import 'highcharts/modules/treemap'
+import 'highcharts/modules/item-series'
+import worldMapTopo from '@highcharts/map-collection/custom/world.topo.json'
 import { api } from '../lib/api'
 import { useTheme } from '../state/theme'
 
@@ -194,6 +201,7 @@ export default function DashboardAdmin() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
+  const [vercelData, setVercelData] = useState(null)
 
   // Global date range
   const [globalDays, setGlobalDays] = useState(30)
@@ -209,8 +217,12 @@ export default function DashboardAdmin() {
     setLoading(true)
     setErr('')
     try {
-      const d = await api.getAnalytics(days)
+      const [d, vd] = await Promise.all([
+        api.getAnalytics(days),
+        api.getVercelAnalytics().catch(() => null)
+      ])
       setData(d)
+      setVercelData(vd)
     } catch (e) {
       setErr(e.message || 'Failed to load analytics.')
     } finally {
@@ -287,16 +299,21 @@ export default function DashboardAdmin() {
     ]
   })
 
-  // 2. Order Status Breakdown (donut)
+  // 2. Order Status Breakdown (3D donut)
   const statusData = Object.entries(order_statuses).map(([name, y]) => ({ name, y }))
   const statusOpts = merge(HC_BASE, {
-    chart: { type: 'pie', height: 300 },
+    chart: {
+      type: 'pie',
+      height: 300,
+      options3d: { enabled: true, alpha: 45, beta: 0 }
+    },
     title: { text: 'Order Status' },
     plotOptions: {
       pie: {
-        innerSize: '60%',
-        borderWidth: 2,
-        borderColor: isDark ? '#27272a' : '#ffffff',
+        innerSize: '50%',
+        depth: 35,
+        borderWidth: 1,
+        borderColor: '#ffffff',
         dataLabels: {
           enabled: true,
           format: '<b>{point.name}</b>: {point.y}',
@@ -318,14 +335,26 @@ export default function DashboardAdmin() {
     series: [{ name: 'Orders', data: dessert_types.map(d => d.count) }]
   })
 
-  // 4. Event Type Distribution (column)
+  // 4. Event Type Distribution (3D column)
   const eventOpts = merge(HC_BASE, {
-    chart: { type: 'column', height: 300 },
+    chart: {
+      type: 'column',
+      height: 300,
+      options3d: { enabled: true, alpha: 15, beta: 15, depth: 50, viewDistance: 25 }
+    },
     title: { text: 'Event Types' },
     xAxis: { categories: event_types.map(d => d.type || 'Unknown') },
     yAxis: { allowDecimals: false },
     legend: { enabled: false },
-    plotOptions: { column: { borderRadius: 4, borderWidth: 0, colorByPoint: true } },
+    plotOptions: {
+      column: {
+        borderRadius: 2,
+        borderWidth: 0,
+        colorByPoint: true,
+        depth: 40,
+        groupZPadding: 10
+      }
+    },
     series: [{ name: 'Events', data: event_types.map(d => d.count) }]
   })
 
@@ -378,23 +407,187 @@ export default function DashboardAdmin() {
     series: [{ name: 'Visits', data: topPages.map(d => d.count) }]
   })
 
-  // 7. Inquiry Subjects (donut)
+  // 7. Inquiry Subjects (item / parliament chart)
   const subjectData = inquiry_subjects.map(d => ({ name: d.subject || 'Other', y: d.count }))
   const subjectOpts = merge(HC_BASE, {
-    chart: { type: 'pie', height: 280 },
+    chart: { type: 'item', height: 280 },
     title: { text: 'Inquiry Subjects' },
+    legend: {
+      labelFormat: '{name} ({y})',
+      itemStyle: { color: INK, fontWeight: '500', fontSize: '11px' }
+    },
+    series: [{
+      name: 'Subjects',
+      keys: ['name', 'y', 'color'],
+      data: subjectData.map((d, i) => ({
+        name: d.name,
+        y: d.y,
+        color: CHART_COLORS[i % CHART_COLORS.length]
+      })),
+      dataLabels: { enabled: false },
+      size: '170%',
+      center: ['50%', '70%'],
+      startAngle: -100,
+      endAngle: 100
+    }]
+  })
+
+  /* ── Vercel Web Analytics charts ───────────────── */
+  const vHelper = (dim) => {
+    if (!vercelData || !vercelData[dim]) return []
+    const d = vercelData[dim]
+    // Vercel returns { data: [{ key, total, devices }] } or an array directly
+    const arr = Array.isArray(d) ? d : (d.data || [])
+    return arr.slice(0, 10)
+  }
+
+  const browserItems = vHelper('browser')
+  const countryItems = vHelper('country')
+  const deviceItems  = vHelper('device')
+  const osItems      = vHelper('os')
+
+  const hasVercel = browserItems.length > 0 || countryItems.length > 0 || deviceItems.length > 0 || osItems.length > 0
+
+  // 8. Browsers (3D pie)
+  const browserOpts = merge(HC_BASE, {
+    chart: {
+      type: 'pie',
+      height: 320,
+      options3d: { enabled: true, alpha: 45, beta: 0 }
+    },
+    title: { text: 'Browsers' },
     plotOptions: {
       pie: {
-        innerSize: '55%',
-        borderWidth: 2,
-        borderColor: isDark ? '#27272a' : '#ffffff',
+        depth: 30,
+        borderWidth: 1,
+        borderColor: '#ffffff',
+        allowPointSelect: true,
+        cursor: 'pointer',
         dataLabels: {
+          enabled: true,
+          format: '<b>{point.name}</b>: {point.percentage:.1f}%',
+          style: { fontSize: '11px', fontWeight: '500', color: INK, textOutline: 'none' },
+          connectorColor: '#ccc'
+        },
+        showInLegend: true
+      }
+    },
+    series: [{ name: 'Visits', data: browserItems.map(d => ({ name: d.key || 'Unknown', y: d.total || d.visitors || 0 })) }]
+  })
+
+  // 9. Countries (world map)
+  const countryMapData = countryItems.map(d => {
+    // Vercel returns 2-letter ISO codes; Highcharts map uses lowercase
+    const code = (d.key || '').toLowerCase()
+    return [code, d.total || d.visitors || 0]
+  })
+  const countryOpts = {
+    chart: {
+      map: worldMapTopo,
+      height: 360,
+      backgroundColor: 'transparent',
+      style: { fontFamily: 'Manrope, sans-serif' }
+    },
+    title: { text: 'Visitor Countries', style: { fontSize: '14px', fontWeight: '700', color: INK } },
+    credits: { enabled: false },
+    mapNavigation: { enabled: true, buttonOptions: { verticalAlign: 'bottom' } },
+    colorAxis: {
+      min: 0,
+      stops: [
+        [0,   '#fef2f2'],
+        [0.3, '#fca5a5'],
+        [0.6, '#ef4444'],
+        [1,   CHERRY]
+      ],
+      labels: { style: { color: MUTED, fontSize: '10px' } }
+    },
+    legend: {
+      layout: 'horizontal',
+      align: 'center',
+      verticalAlign: 'bottom',
+      floating: false,
+      backgroundColor: 'rgba(255,255,255,0.7)',
+      borderRadius: 4
+    },
+    tooltip: {
+      backgroundColor: INK,
+      style: { color: BONE, fontSize: '12px' },
+      borderRadius: 8,
+      borderWidth: 0,
+      shadow: false,
+      headerFormat: '',
+      pointFormat: '<b>{point.name}</b>: {point.value} visits'
+    },
+    series: [{
+      name: 'Visits',
+      data: countryMapData,
+      joinBy: ['iso-a2', 0],
+      states: {
+        hover: { color: '#f97316', borderColor: INK }
+      },
+      borderColor: '#d4d4d8',
+      borderWidth: 0.5,
+      nullColor: '#f5f5f5'
+    }]
+  }
+
+  // 10. Devices (variable radius pie — larger slice = bigger radius)
+  const deviceOpts = merge(HC_BASE, {
+    chart: { type: 'variablepie', height: 320 },
+    title: { text: 'Devices' },
+    tooltip: {
+      headerFormat: '',
+      pointFormat: '<span style="color:{point.color}">\u25CF</span> <b>{point.name}</b><br/>Visits: <b>{point.y}</b><br/>Share: <b>{point.percentage:.1f}%</b>'
+    },
+    plotOptions: {
+      variablepie: {
+        allowPointSelect: true,
+        cursor: 'pointer',
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        dataLabels: {
+          enabled: true,
+          format: '<b>{point.name}</b>',
+          style: { fontSize: '12px', fontWeight: '600', color: INK, textOutline: 'none' }
+        },
+        minPointSize: 40,
+        zMin: 0
+      }
+    },
+    series: [{
+      name: 'Devices',
+      innerSize: '30%',
+      data: deviceItems.map(d => {
+        const v = d.total || d.visitors || 0
+        return { name: d.key || 'Unknown', y: v, z: v }
+      })
+    }]
+  })
+
+  // 11. Operating Systems (funnel)
+  const sortedOS = [...osItems].sort((a, b) => (b.total || b.visitors || 0) - (a.total || a.visitors || 0))
+  const osOpts = merge(HC_BASE, {
+    chart: { type: 'funnel', height: 320 },
+    title: { text: 'Operating Systems' },
+    plotOptions: {
+      funnel: {
+        neckWidth: '25%',
+        neckHeight: '20%',
+        width: '65%',
+        borderWidth: 0,
+        dataLabels: {
+          enabled: true,
           format: '<b>{point.name}</b>: {point.y}',
-          style: { fontSize: '11px', fontWeight: '500', color: isDark ? '#e4e4e7' : INK, textOutline: 'none' }
+          style: { fontSize: '11px', fontWeight: '500', color: INK, textOutline: 'none' },
+          connectorColor: '#ccc'
         }
       }
     },
-    series: [{ name: 'Subject', data: subjectData }]
+    legend: { enabled: false },
+    series: [{
+      name: 'OS',
+      data: sortedOS.map(d => [d.key || 'Unknown', d.total || d.visitors || 0])
+    }]
   })
 
   /* ── render ────────────────────────────────────── */
@@ -479,6 +672,45 @@ export default function DashboardAdmin() {
             <ActivityFeed items={activity} />
           </ChartCard>
         </div>
+
+        {/* ── row 5: Vercel Web Analytics ── */}
+        <>
+          <div className="flex items-center gap-2 pt-2">
+            <div className="text-xs uppercase tracking-widest text-zinc-400 font-semibold">
+              Vercel Web Analytics
+            </div>
+            <div className="flex-1 h-px bg-zinc-200" />
+            {!hasVercel && (
+              <div className="text-[11px] text-zinc-400 italic">
+                No data yet — charts populate once visitors are tracked
+              </div>
+            )}
+          </div>
+
+          {/* World map — full width */}
+          <div className="grid grid-cols-1 gap-6">
+            <ChartCard>
+              <HighchartsReact
+                highcharts={Highcharts}
+                constructorType="mapChart"
+                options={countryOpts}
+              />
+            </ChartCard>
+          </div>
+
+          {/* Browsers (3D pie) + Devices (variable pie) + OS (funnel) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <ChartCard>
+              <HighchartsReact highcharts={Highcharts} options={browserOpts} />
+            </ChartCard>
+            <ChartCard>
+              <HighchartsReact highcharts={Highcharts} options={deviceOpts} />
+            </ChartCard>
+            <ChartCard>
+              <HighchartsReact highcharts={Highcharts} options={osOpts} />
+            </ChartCard>
+          </div>
+        </>
       </div>
     </section>
   )

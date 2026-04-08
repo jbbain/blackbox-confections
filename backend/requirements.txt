@@ -8,3 +8,4 @@ email-validator==2.2.0
 fastapi-mail==1.4.2
 certifi
 alembic
+httpx

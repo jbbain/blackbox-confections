@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
 from datetime import datetime, timedelta
+import httpx
 from .db import get_db
 from . import crud, schemas, models
+from .config import settings
 from .emailer import send_order_email, send_order_confirmation_email, send_contact_email, send_inquiry_confirmation_email
 
 router = APIRouter()
@@ -314,3 +316,51 @@ def analytics_summary(days: int = Query(30, ge=1, le=365), db: Session = Depends
         "inquiry_subjects": [{"subject": s, "count": c} for s, c in inquiry_subjects],
         "activity": activity[:10]
     }
+
+# -------- Vercel Web Analytics Proxy --------
+VERCEL_API = "https://vercel.com/api/web/insights/stats"
+
+@router.get("/analytics/vercel")
+async def vercel_analytics():
+    """Proxy Vercel Web Analytics data for browsers, countries, devices, OS, referrers."""
+    token = settings.vercel_api_token
+    project_id = settings.vercel_project_id
+
+    if not token or not project_id:
+        raise HTTPException(status_code=501, detail="Vercel analytics not configured")
+
+    headers = {"Authorization": f"Bearer {token}"}
+
+    now = datetime.utcnow()
+    from_str = (now - timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    to_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Vercel dimension types → friendly keys
+    dimension_map = {
+        "client_name": "browser",
+        "country": "country",
+        "device_type": "device",
+        "os_name": "os",
+        "referrer_hostname": "referrer",
+    }
+
+    result = {}
+    async with httpx.AsyncClient(timeout=15) as client:
+        for vercel_type, key in dimension_map.items():
+            url = f"{VERCEL_API}/{vercel_type}"
+            params = {
+                "projectId": project_id,
+                "from": from_str,
+                "to": to_str,
+                "limit": "10",
+            }
+            try:
+                resp = await client.get(url, headers=headers, params=params)
+                if resp.status_code == 200:
+                    result[key] = resp.json().get("data", [])
+                else:
+                    result[key] = []
+            except Exception:
+                result[key] = []
+
+    return result

@@ -194,11 +194,18 @@ export default function Admin() {
 }
 
 function OrdersAdmin({ orders, setOrders, setError }) {
+  const [fireworksId, setFireworksId] = useState(null)
+
   const updateStatus = async (id, status) => {
     setError('')
     try {
       const updated = await api.updateOrder(id, { status })
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)))
+
+      if (status === 'completed') {
+        setFireworksId(id)
+        setTimeout(() => setFireworksId(null), 1200)
+      }
     } catch (e) {
       setError(e.message || 'Failed to update order request.')
     }
