@@ -3,11 +3,19 @@ import Section from '../components/Section'
 import RatingStars from '../components/RatingStars'
 import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
+import useScrollReveal from '../hooks/useScrollReveal'
 
 export default function Home() {
   const [gallery, setGallery] = useState([])
   const [reviews, setReviews] = useState([])
   const [error, setError] = useState('')
+
+  const [heroRef, heroVisible] = useScrollReveal({ threshold: 0.05 })
+  const [cardRef, cardVisible] = useScrollReveal()
+  const [galleryGridRef, galleryGridVisible] = useScrollReveal()
+  const [stepsRef, stepsVisible] = useScrollReveal()
+  const [reviewsRef, reviewsVisible] = useScrollReveal()
+  const [ctaRef, ctaVisible] = useScrollReveal()
 
   useEffect(() => {
     ;(async () => {
@@ -29,8 +37,8 @@ export default function Home() {
     <>
       <section className="pt-16 pb-10">
         <div className="bb-container">
-          <div className="grid md:grid-cols-12 gap-10 items-end">
-            <div className="md:col-span-8">
+          <div ref={heroRef} className="grid md:grid-cols-12 gap-10 items-end">
+            <div className={`md:col-span-8 reveal slide-left ${heroVisible ? 'visible' : ''}`}>
               <div className="bb-label text-cherry">Luxury custom desserts</div>
               <h1 className="bb-h1 mt-3">
                 Crafted to order. <span className="text-cherry">Designed</span> to impress.
@@ -53,7 +61,11 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="md:col-span-4">
+            <div
+              ref={cardRef}
+              className={`md:col-span-4 reveal slide-right ${cardVisible ? 'visible' : ''}`}
+              style={{ animationDelay: '0.15s' }}
+            >
               <div className="bb-card p-6">
                 <div className="bb-label">Signature experience</div>
                 <div className="font-display text-2xl mt-2 leading-tight">
@@ -89,14 +101,14 @@ export default function Home() {
           </Link>
         }
       >
-        <div className="grid md:grid-cols-3 gap-6">
-          {gallery.map((item) => (
+        <div ref={galleryGridRef} className="grid md:grid-cols-3 gap-6">
+          {gallery.map((item, i) => (
             <Link
               key={item.id}
               to={`/gallery#cake-${item.id}`}
-              className="bb-card overflow-hidden block transition-transform duration-200 hover:scale-[1.01]"
+              className={`gallery-card bb-card overflow-hidden block reveal scale-in ${galleryGridVisible ? 'visible' : ''} stagger-${i + 1}`}
             >
-              <div className="aspect-[4/3] bg-black/5 dark:bg-white/5">
+              <div className="aspect-[4/3] bg-black/5 dark:bg-white/5 overflow-hidden">
                 <img
                   src={
                     item.image_url?.startsWith('http') || item.image_url?.startsWith('data:')
@@ -136,8 +148,8 @@ export default function Home() {
           </Link>
         }
       >
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bb-card p-6">
+        <div ref={stepsRef} className="grid md:grid-cols-3 gap-6">
+          <div className={`bb-card p-6 reveal fade-up ${stepsVisible ? 'visible' : ''} stagger-1`}>
             <div className="bb-label">01</div>
             <div className="font-display text-xl mt-2">Browse the gallery</div>
             <p className="text-sm bb-muted mt-3 leading-relaxed">
@@ -145,7 +157,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="bb-card p-6">
+          <div className={`bb-card p-6 reveal fade-up ${stepsVisible ? 'visible' : ''} stagger-2`}>
             <div className="bb-label">02</div>
             <div className="font-display text-xl mt-2">Submit your request</div>
             <p className="text-sm bb-muted mt-3 leading-relaxed">
@@ -153,7 +165,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="bb-card p-6">
+          <div className={`bb-card p-6 reveal fade-up ${stepsVisible ? 'visible' : ''} stagger-3`}>
             <div className="bb-label">03</div>
             <div className="font-display text-xl mt-2">We bring it to life</div>
             <p className="text-sm bb-muted mt-3 leading-relaxed">
@@ -172,9 +184,9 @@ export default function Home() {
           </Link>
         }
       >
-        <div className="grid md:grid-cols-3 gap-6">
-          {reviews.map((r) => (
-            <div key={r.id} className="bb-card p-6">
+        <div ref={reviewsRef} className="grid md:grid-cols-3 gap-6">
+          {reviews.map((r, i) => (
+            <div key={r.id} className={`bb-card p-6 reveal fade-up ${reviewsVisible ? 'visible' : ''} stagger-${i + 1}`}>
               <div className="flex items-center justify-between gap-4">
                 <div className="font-display text-lg">{r.name}</div>
                 <RatingStars rating={r.rating} />
@@ -197,7 +209,10 @@ export default function Home() {
       </Section>
 
       <Section eyebrow="Custom Orders" title="Ready to create something unforgettable?">
-        <div className="bb-card p-8 md:p-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div
+          ref={ctaRef}
+          className={`bb-card p-8 md:p-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 reveal scale-in ${ctaVisible ? 'visible' : ''}`}
+        >
           <div>
             <div className="font-display text-2xl md:text-3xl">
               Let’s design your next centerpiece.

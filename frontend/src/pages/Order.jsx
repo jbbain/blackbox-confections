@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Section from '../components/Section'
 import { api } from '../lib/api'
+import useScrollReveal from '../hooks/useScrollReveal'
 
 export default function Order() {
   const [form, setForm] = useState({
@@ -105,16 +106,20 @@ export default function Order() {
     }
   }
 
+  const [heroRef, heroVisible] = useScrollReveal({ threshold: 0.05 })
+
   return (
     <>
       <section className="pt-16">
         <div className="bb-container">
-          <div className="bb-label text-cherry">Custom Order</div>
-          <h1 className="bb-h1 mt-3">Request your order</h1>
-          <p className="mt-6 text-base md:text-lg bb-muted leading-relaxed max-w-3xl">
-            Tell us about your event, style, servings, and flavor preferences. We’ll review
-            your request and follow up with next steps.
-          </p>
+          <div ref={heroRef} className={`reveal fade-up ${heroVisible ? 'visible' : ''}`}>
+            <div className="bb-label text-cherry">Custom Order</div>
+            <h1 className="bb-h1 mt-3">Request your order</h1>
+            <p className="mt-6 text-base md:text-lg bb-muted leading-relaxed max-w-3xl">
+              Tell us about your event, style, servings, and flavor preferences. We'll review
+              your request and follow up with next steps.
+            </p>
+          </div>
         </div>
       </section>
 
