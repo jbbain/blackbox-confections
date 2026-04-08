@@ -2,6 +2,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
 
 from app.config import settings
 from app.db import Base, engine, SessionLocal
@@ -28,7 +30,13 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    # Run Alembic migrations to bring DB schema up to date
+    # This safely adds new columns/tables without deleting data
+    alembic_ini = str(BASE_DIR / "alembic.ini")
+    alembic_cfg = AlembicConfig(alembic_ini)
+    alembic_cfg.set_main_option("script_location", str(BASE_DIR / "alembic"))
+    alembic_command.upgrade(alembic_cfg, "head")
+
     db = SessionLocal()
     try:
       seed(db)

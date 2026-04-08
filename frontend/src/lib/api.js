@@ -52,5 +52,11 @@ export const api = {
   // contact
   sendContact: (body) => request('/contact', { method: 'POST', body: JSON.stringify(body) }),
   listContacts: () => request('/contacts'),
-  deleteContact: (id) => request(`/contacts/${id}`, { method: 'DELETE' })
+  deleteContact: (id) => request(`/contacts/${id}`, { method: 'DELETE' }),
+
+  // page tracking
+  trackVisit: (page) => request('/track', { method: 'POST', body: JSON.stringify({ page }) }).catch(() => {}),
+
+  // analytics
+  getAnalytics: (days = 30) => request(`/analytics/summary?days=${days}`)
 }
