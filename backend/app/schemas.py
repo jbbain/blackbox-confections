@@ -113,7 +113,8 @@ class GalleryOut(GalleryBase):
 class ContactCreate(BaseModel):
     name: str
     email: EmailStr
-    subject: str = "Inquiry"
+    phone: str = Field(..., pattern=r"^\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{4}$")
+    subject: str = "General Inquiry"
     message: str
 
 class ContactOut(ContactCreate):

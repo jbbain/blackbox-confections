@@ -24,7 +24,9 @@ conf = ConnectionConfig(
 
 async def send_order_email(order):
     # Format event_date from "2026-04-07" to "Apr 7, 2026"
-    from datetime import datetime
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
     event_date_display = order.event_date or "Not specified"
     if order.event_date:
         try:
@@ -33,7 +35,12 @@ async def send_order_email(order):
         except ValueError:
             pass
 
-    created_display = order.created_at.strftime("%b %-d, %Y at %-I:%M %p") if order.created_at else "—"
+    if order.created_at:
+        utc_dt = order.created_at.replace(tzinfo=timezone.utc)
+        eastern_dt = utc_dt.astimezone(eastern)
+        created_display = eastern_dt.strftime("%b %-d, %Y at %-I:%M %p EST")
+    else:
+        created_display = "—"
 
     html = f"""
 <!DOCTYPE html>
@@ -372,22 +379,249 @@ async def send_order_confirmation_email(order):
 
 
 async def send_contact_email(contact):
-    body = f"""
-New website inquiry
+    """Styled internal notification email for new inquiries."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    eastern = ZoneInfo("America/New_York")
 
-Name: {contact.name}
-Email: {contact.email}
-Subject: {contact.subject}
+    if contact.created_at:
+        utc_dt = contact.created_at.replace(tzinfo=timezone.utc)
+        eastern_dt = utc_dt.astimezone(eastern)
+        created_display = eastern_dt.strftime("%b %-d, %Y at %-I:%M %p EST")
+    else:
+        created_display = "—"
 
-Message:
-{contact.message}
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Inquiry #{contact.id}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F2F2F2; padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#050505; padding:32px 40px; text-align:center;">
+              <img src="cid:logo"
+                   alt="BlackBox Confections"
+                   width="100"
+                   style="display:block; margin:0 auto; width:100px; height:auto;" />
+            </td>
+          </tr>
+
+          <!-- Alert banner -->
+          <tr>
+            <td style="background-color:#D2042D; padding:14px 40px; text-align:center;">
+              <h1 style="margin:0; font-family:Georgia, 'Times New Roman', serif; font-size:18px; font-weight:700; color:#FFFFFF; letter-spacing:1.5px; text-transform:uppercase;">
+                New Inquiry &mdash; #{contact.id}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#FFFFFF; padding:32px 40px 16px;">
+              <p style="margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#999999;">
+                Received
+              </p>
+              <p style="margin:0 0 24px; font-size:15px; color:#333333; font-weight:600;">
+                {created_display}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Contact info -->
+          <tr>
+            <td style="background-color:#FFFFFF; padding:0 40px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="background-color:#FAFAFA; border-left:3px solid #D2042D;">
+                <tr>
+                  <td style="padding:20px 24px 8px;">
+                    <h3 style="margin:0 0 12px; font-family:Georgia, 'Times New Roman', serif; font-size:13px; text-transform:uppercase; letter-spacing:1.5px; color:#D2042D;">
+                      Contact Details
+                    </h3>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 24px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px; color:#333333;">
+                      <tr>
+                        <td style="padding:5px 0; color:#888888; width:110px; vertical-align:top;">Name</td>
+                        <td style="padding:5px 0; font-weight:600;">{contact.name}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; color:#888888; vertical-align:top;">Email</td>
+                        <td style="padding:5px 0;">
+                          <a href="mailto:{contact.email}" style="color:#D2042D; text-decoration:none;">{contact.email}</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; color:#888888; vertical-align:top;">Phone</td>
+                        <td style="padding:5px 0;">{contact.phone or '—'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0; color:#888888; vertical-align:top;">Subject</td>
+                        <td style="padding:5px 0;">{contact.subject}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message -->
+          <tr>
+            <td style="background-color:#FFFFFF; padding:0 40px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="background-color:#FAFAFA; border-left:3px solid #050505;">
+                <tr>
+                  <td style="padding:20px 24px 8px;">
+                    <h3 style="margin:0 0 12px; font-family:Georgia, 'Times New Roman', serif; font-size:13px; text-transform:uppercase; letter-spacing:1.5px; color:#050505;">
+                      Message
+                    </h3>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 24px 20px;">
+                    <p style="margin:0; font-size:14px; line-height:1.6; color:#333333; white-space:pre-wrap;">{contact.message}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#050505; padding:20px 40px; text-align:center;">
+              <p style="margin:0; font-size:11px; color:#666666;">
+                This is an internal inquiry notification from blackboxconfections.com
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
 """
 
     message = MessageSchema(
-        subject=f"New Inquiry - {contact.subject}",
+        subject=f"📩 New Inquiry #{contact.id} — {contact.name} | {contact.subject}",
         recipients=["inquiry@blackboxconfections.com"],
-        body=body,
-        subtype="plain",
+        body=html,
+        subtype=MessageType.html,
+        attachments=[{
+            "file": str(LOGO_PATH),
+            "headers": {
+                "Content-ID": "<logo>",
+                "Content-Disposition": "inline; filename=\"logo.png\"",
+            },
+            "mime_type": "image",
+            "mime_subtype": "png",
+        }],
+    )
+
+    fm = FastMail(conf)
+    await fm.send_message(message)
+
+
+async def send_inquiry_confirmation_email(contact):
+    """Auto-response to the user after they submit an inquiry."""
+
+    first_name = contact.name.split()[0] if contact.name else "there"
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inquiry Received</title>
+</head>
+<body style="margin:0; padding:0; background-color:#FAFAFA; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAFAFA; padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px; width:100%;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#050505; padding:40px 40px 30px; text-align:center;">
+              <img src="cid:logo"
+                   alt="BlackBox Confections"
+                   width="120"
+                   style="display:block; margin:0 auto; width:120px; height:auto;" />
+              <div style="width:40px; height:2px; background-color:#D2042D; margin:16px auto 0;"></div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="background-color:#FFFFFF; padding:40px;">
+              <h2 style="margin:0 0 8px; font-family:Georgia, 'Times New Roman', serif; font-size:22px; color:#050505;">
+                Thank you, {first_name}.
+              </h2>
+              <p style="margin:0 0 24px; font-size:15px; line-height:1.7; color:#444444;">
+                We've received your inquiry and appreciate you reaching out.
+                A member of our team will review your message and get back to you as soon as possible.
+              </p>
+
+              <p style="margin:0 0 6px; font-size:15px; line-height:1.7; color:#444444;">
+                If you have any additional details to share, feel free to reply to this email or
+                reach us at <a href="mailto:inquiry@blackboxconfections.com" style="color:#D2042D; text-decoration:none; font-weight:600;">inquiry@blackboxconfections.com</a>.
+              </p>
+              <p style="margin:24px 0 0; font-size:15px; line-height:1.7; color:#444444;">
+                We look forward to connecting with you.
+              </p>
+              <p style="margin:16px 0 0; font-size:15px; color:#050505; font-weight:600;">
+                — The BlackBox Confections Team
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#050505; padding:24px 40px; text-align:center;">
+              <p style="margin:0 0 4px; font-size:12px; color:#888888;">
+                &copy; 2020 BlackBox Confections. All rights reserved.
+              </p>
+              <p style="margin:0; font-size:12px; color:#666666;">
+                <a href="https://www.blackboxconfections.com" style="color:#D2042D; text-decoration:none;">blackboxconfections.com</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+    message = MessageSchema(
+        subject="We've Received Your Inquiry — BlackBox Confections",
+        recipients=[contact.email],
+        body=html,
+        subtype=MessageType.html,
+        attachments=[{
+            "file": str(LOGO_PATH),
+            "headers": {
+                "Content-ID": "<logo>",
+                "Content-Disposition": "inline; filename=\"logo.png\"",
+            },
+            "mime_type": "image",
+            "mime_subtype": "png",
+        }],
     )
 
     fm = FastMail(conf)
