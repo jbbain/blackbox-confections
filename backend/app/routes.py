@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .db import get_db
 from . import crud, schemas
-from .emailer import send_order_email, send_order_confirmation_email, send_contact_email
+from .emailer import send_order_email, send_order_confirmation_email, send_contact_email, send_inquiry_confirmation_email
 
 router = APIRouter()
 
@@ -137,6 +137,10 @@ async def create_contact(data: schemas.ContactCreate, db: Session = Depends(get_
         await send_contact_email(obj)
     except Exception as e:
         print(f"Failed to send contact email: {e}")
+    try:
+        await send_inquiry_confirmation_email(obj)
+    except Exception as e:
+        print(f"Failed to send inquiry confirmation email: {e}")
     return obj
 
 @router.delete("/contacts/{contact_id}")

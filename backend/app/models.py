@@ -56,6 +56,7 @@ class ContactMessage(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     email: Mapped[str] = mapped_column(String(200), nullable=False)
-    subject: Mapped[str] = mapped_column(String(200), default="Inquiry")
+    phone: Mapped[str] = mapped_column(String(80), default="")
+    subject: Mapped[str] = mapped_column(String(200), default="General Inquiry")
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
