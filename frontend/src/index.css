@@ -16,7 +16,7 @@ html.dark{
 
 @layer components{
   .bb-container{ @apply mx-auto w-full max-w-6xl px-4; }
-  .bb-card{ @apply border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm; }
+  .bb-card{ @apply border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-sm transition-shadow hover:shadow-md dark:hover:shadow-[0_4px_20px_rgba(255,255,255,0.08)]; }
   .bb-btn{ @apply inline-flex items-center justify-center gap-2 px-4 py-2 border border-black/15 dark:border-white/15 rounded-none text-sm tracking-wide uppercase; }
   .bb-btn-primary{ @apply bg-ink text-bone border-ink dark:bg-bone dark:text-ink dark:border-bone; }
   .bb-btn-accent{ @apply bg-cherry text-bone border-cherry; }

@@ -219,9 +219,15 @@ def analytics_summary(days: int = Query(30, ge=1, le=365), db: Session = Depends
         .all()
     )
 
-    # Page visits by page
+    # Page visits by page (filtered by date range)
     visits_by_page = (
-        db.query(models.PageVisit.page, func.count(models.PageVisit.id))
+        db.query(
+            models.PageVisit.page,
+            func.count(models.PageVisit.id),
+            func.min(models.PageVisit.visited_at),
+            func.max(models.PageVisit.visited_at),
+        )
+        .filter(models.PageVisit.visited_at >= cutoff)
         .group_by(models.PageVisit.page)
         .order_by(func.count(models.PageVisit.id).desc())
         .all()
@@ -294,7 +300,15 @@ def analytics_summary(days: int = Query(30, ge=1, le=365), db: Session = Depends
         "orders_by_day": [{"day": str(d), "count": c} for d, c in orders_by_day],
         "inquiries_by_day": [{"day": str(d), "count": c} for d, c in inquiries_by_day],
         "visits_by_day": [{"day": str(d), "count": c} for d, c in visits_by_day],
-        "visits_by_page": [{"page": p, "count": c} for p, c in visits_by_page],
+        "visits_by_page": [
+            {
+                "page": p,
+                "count": c,
+                "first_visit": fv.isoformat() if fv else "",
+                "last_visit": lv.isoformat() if lv else "",
+            }
+            for p, c, fv, lv in visits_by_page
+        ],
         "dessert_types": [{"type": t, "count": c} for t, c in dessert_types],
         "event_types": [{"type": t, "count": c} for t, c in event_types],
         "inquiry_subjects": [{"subject": s, "count": c} for s, c in inquiry_subjects],

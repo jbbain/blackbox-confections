@@ -218,8 +218,17 @@ function OrdersAdmin({ orders, setOrders, setError }) {
     <Section eyebrow="Manage" title="Custom Order Requests">
       <div className="space-y-4">
         {orders.map((o) => (
-          <div key={o.id} className="bb-card p-6">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div key={o.id} className="bb-card p-6 relative overflow-hidden">
+            {/* ── fireworks overlay when completed ── */}
+            {o.status === 'completed' && <Fireworks />}
+
+            {/* ── tracker ── */}
+            <OrderTracker
+              status={o.status || 'new'}
+              onChange={(s) => updateStatus(o.id, s)}
+            />
+
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mt-5">
               <div className="max-w-3xl">
                 <div className="font-display text-xl">Request #{o.id}</div>
                 <div className="text-xs uppercase tracking-widest opacity-70 mt-1">
@@ -264,28 +273,10 @@ function OrdersAdmin({ orders, setOrders, setError }) {
                 </div>
               </div>
 
-              <div className="md:text-right">
-                <div className="text-xs uppercase tracking-widest opacity-70">Status</div>
-                <div className="font-display text-2xl mt-1">
-                  {(o.status || 'new').replace('_', ' ')}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2 md:justify-end">
-                  {['new', 'in_progress', 'ready', 'completed', 'cancelled'].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`bb-btn ${o.status === s ? 'bb-btn-accent' : ''}`}
-                      onClick={() => updateStatus(o.id, s)}
-                    >
-                      {s.replace('_', ' ')}
-                    </button>
-                  ))}
-
-                  <button type="button" className="bb-btn" onClick={() => del(o.id)}>
-                    Delete
-                  </button>
-                </div>
+              <div className="md:text-right shrink-0">
+                <button type="button" className="bb-btn text-xs mt-2" onClick={() => del(o.id)}>
+                  🗑 Delete
+                </button>
               </div>
             </div>
           </div>
@@ -296,6 +287,190 @@ function OrdersAdmin({ orders, setOrders, setError }) {
         )}
       </div>
     </Section>
+  )
+}
+
+/* ── Fireworks / confetti burst for completed orders ── */
+function Fireworks() {
+  const particles = React.useMemo(() => {
+    const colors = ['#D2042D', '#16a34a', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#22d3ee']
+    return Array.from({ length: 40 }, (_, i) => ({
+      id: i,
+      color: colors[i % colors.length],
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 0.6}s`,
+      duration: `${1.2 + Math.random() * 1.2}s`,
+      size: `${4 + Math.random() * 4}px`,
+      tx: `${(Math.random() - 0.5) * 200}px`,
+      ty: `${-40 - Math.random() * 120}px`,
+      rotate: `${Math.random() * 720}deg`,
+      shape: i % 5 === 0 ? 'circle' : i % 5 === 1 ? 'star' : 'rect',
+    }))
+  }, [])
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+      {particles.map((p) => (
+        <span
+          key={p.id}
+          className="absolute bottom-0"
+          style={{
+            left: p.left,
+            width: p.size,
+            height: p.shape === 'rect' ? `${parseFloat(p.size) * 1.8}px` : p.size,
+            backgroundColor: p.color,
+            borderRadius: p.shape === 'circle' ? '50%' : p.shape === 'star' ? '2px' : '1px',
+            opacity: 0,
+            animation: `fireworkBurst ${p.duration} ${p.delay} ease-out forwards`,
+            ['--tx']: p.tx,
+            ['--ty']: p.ty,
+            ['--rot']: p.rotate,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes fireworkBurst {
+          0% {
+            opacity: 1;
+            transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+          }
+          60% {
+            opacity: 0.9;
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(var(--ty)) translateX(var(--tx)) rotate(var(--rot)) scale(0.3);
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+/* ── Dominos-style order progress tracker ────────── */
+const ORDER_STEPS = [
+  { key: 'new',         label: 'New',         icon: '📋' },
+  { key: 'in_progress', label: 'In Progress', icon: '🧑🏿‍🍳' },
+  { key: 'ready',       label: 'Ready',       icon: '🎂' },
+  { key: 'completed',   label: 'Completed',   icon: '🎉' },
+]
+const CANCELLED_KEY = 'cancelled'
+
+function OrderTracker({ status, onChange }) {
+  const isCancelled = status === CANCELLED_KEY
+  const activeIdx = ORDER_STEPS.findIndex((s) => s.key === status)
+  const isAllDone = status === 'completed'
+
+  // Color scheme: green when completed, cherry otherwise
+  const accent    = isAllDone ? '#16a34a' : '#D2042D' // green-600 vs cherry
+  const accentBg  = isAllDone ? 'bg-green-600'   : 'bg-cherry'
+  const accentTxt = isAllDone ? 'text-green-600'  : 'text-cherry'
+  const accentShadow = isAllDone
+    ? 'shadow-lg shadow-green-600/30 ring-4 ring-green-600/20'
+    : 'shadow-lg shadow-cherry/30 ring-4 ring-cherry/20'
+  const accentPing = isAllDone ? 'bg-green-600/20' : 'bg-cherry/20'
+
+  return (
+    <div className="space-y-2">
+      {/* ── step rail ── */}
+      <div className="relative flex items-center">
+        {ORDER_STEPS.map((step, i) => {
+          const isCompleted = !isCancelled && activeIdx > i
+          const isActive    = !isCancelled && activeIdx === i
+          const isPast      = isCompleted || isActive
+
+          return (
+            <React.Fragment key={step.key}>
+              {/* connector line (before every step except the first) */}
+              {i > 0 && (
+                <div className="flex-1 h-0.5 mx-1 rounded-full transition-colors duration-500 ease-out"
+                  style={{
+                    background: isPast
+                      ? accent
+                      : isCancelled
+                        ? 'rgba(239,68,68,0.25)'
+                        : 'rgba(161,161,170,0.25)'
+                  }}
+                />
+              )}
+
+              {/* step node */}
+              <button
+                type="button"
+                onClick={() => onChange(step.key)}
+                className="group relative flex flex-col items-center shrink-0 focus:outline-none"
+                title={`Set to ${step.label}`}
+              >
+                {/* circle */}
+                <div
+                  className={`
+                    relative z-10 flex items-center justify-center rounded-full
+                    transition-all duration-300 ease-out cursor-pointer
+                    ${isActive
+                      ? `w-10 h-10 ${accentBg} text-white ${accentShadow} scale-110`
+                      : isCompleted
+                        ? `w-8 h-8 ${accentBg} text-white shadow-sm opacity-90`
+                        : isCancelled
+                          ? 'w-8 h-8 bg-red-500/15 text-red-400 dark:bg-red-500/20 dark:text-red-400'
+                          : 'w-8 h-8 bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700'
+                    }
+                  `}
+                >
+                  <span className={`${isActive ? 'text-lg' : 'text-sm'} leading-none`}>
+                    {isCompleted ? '✓' : step.icon}
+                  </span>
+                </div>
+
+                {/* label */}
+                <span
+                  className={`
+                    mt-1.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap
+                    transition-colors duration-300
+                    ${isActive
+                      ? accentTxt
+                      : isCompleted
+                        ? `${accentTxt} opacity-70`
+                        : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300'
+                    }
+                  `}
+                >
+                  {step.label}
+                </span>
+
+                {/* active pulse ring */}
+                {isActive && (
+                  <span className={`absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full ${accentPing} animate-ping pointer-events-none`} />
+                )}
+              </button>
+            </React.Fragment>
+          )
+        })}
+      </div>
+
+      {/* ── cancel toggle ── */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => onChange(isCancelled ? 'new' : CANCELLED_KEY)}
+          className={`
+            text-[10px] font-semibold uppercase tracking-widest px-2.5 py-1 rounded-md transition-all
+            ${isCancelled
+              ? 'bg-red-500/15 text-red-500 hover:bg-red-500/25'
+              : 'text-zinc-400 hover:text-red-500 hover:bg-red-500/10 dark:text-zinc-500 dark:hover:text-red-400'
+            }
+          `}
+        >
+          {isCancelled ? '↩ Restore' : '✕ Cancel Order'}
+        </button>
+      </div>
+
+      {/* ── cancelled banner ── */}
+      {isCancelled && (
+        <div className="text-center text-xs font-semibold uppercase tracking-widest text-red-500 bg-red-500/10 dark:bg-red-500/15 rounded-md py-2">
+          Order Cancelled
+        </div>
+      )}
+    </div>
   )
 }
 

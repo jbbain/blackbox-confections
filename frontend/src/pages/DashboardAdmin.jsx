@@ -1,51 +1,69 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import { api } from '../lib/api'
+import { useTheme } from '../state/theme'
 
 /* ── brand palette ───────────────────────────────── */
 const CHERRY  = '#D2042D'
 const INK     = '#050505'
 const BONE    = '#FAFAFA'
-const MUTED   = '#71717a'
-const DIVIDER = '#e5e5e5'
 
-const CHART_COLORS = [
+const CHART_COLORS_LIGHT = [
   CHERRY, '#1e293b', '#f59e0b', '#10b981', '#6366f1',
   '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'
 ]
+const CHART_COLORS_DARK = [
+  CHERRY, '#94a3b8', '#f59e0b', '#34d399', '#818cf8',
+  '#f472b6', '#2dd4bf', '#fb923c', '#a78bfa', '#22d3ee'
+]
 
-/* ── Highcharts base theme ───────────────────────── */
-const HC_BASE = {
-  chart: {
-    backgroundColor: 'transparent',
-    style: { fontFamily: 'Manrope, sans-serif' }
-  },
-  title: { style: { fontSize: '14px', fontWeight: '700', color: INK } },
-  credits: { enabled: false },
-  colors: CHART_COLORS,
-  tooltip: {
-    backgroundColor: INK,
-    style: { color: BONE, fontSize: '12px' },
-    borderRadius: 8,
-    borderWidth: 0,
-    shadow: false
-  },
-  legend: {
-    itemStyle: { color: INK, fontWeight: '500', fontSize: '11px' }
-  },
-  xAxis: {
-    labels: { style: { color: MUTED, fontSize: '10px' } },
-    lineColor: DIVIDER,
-    tickColor: DIVIDER
-  },
-  yAxis: {
-    labels: { style: { color: MUTED, fontSize: '10px' } },
-    gridLineColor: '#f0f0f0',
-    title: { text: '' }
-  },
-  plotOptions: {
-    series: { animation: { duration: 800 } }
+/* ── Highcharts base theme (mode-aware) ──────────── */
+function buildHcBase(isDark) {
+  const text    = isDark ? '#e4e4e7' : INK      // zinc-200 vs ink
+  const muted   = isDark ? '#a1a1aa' : '#71717a' // zinc-400 vs zinc-500
+  const divider = isDark ? '#3f3f46' : '#e5e5e5' // zinc-700 vs zinc-200
+  const grid    = isDark ? '#27272a' : '#f0f0f0'  // zinc-800 vs near-white
+  const tipBg   = isDark ? '#18181b' : INK        // zinc-900 vs ink
+  const tipText = isDark ? '#e4e4e7' : BONE
+  const pieBdr  = isDark ? '#27272a' : '#ffffff'
+
+  return {
+    chart: {
+      backgroundColor: 'transparent',
+      style: { fontFamily: 'Manrope, sans-serif' }
+    },
+    title: { style: { fontSize: '14px', fontWeight: '700', color: text } },
+    credits: { enabled: false },
+    colors: isDark ? CHART_COLORS_DARK : CHART_COLORS_LIGHT,
+    tooltip: {
+      backgroundColor: tipBg,
+      style: { color: tipText, fontSize: '12px' },
+      borderRadius: 8,
+      borderWidth: 0,
+      shadow: false
+    },
+    legend: {
+      itemStyle: { color: text, fontWeight: '500', fontSize: '11px' },
+      itemHoverStyle: { color: CHERRY }
+    },
+    xAxis: {
+      labels: { style: { color: muted, fontSize: '10px' } },
+      lineColor: divider,
+      tickColor: divider
+    },
+    yAxis: {
+      labels: { style: { color: muted, fontSize: '10px' } },
+      gridLineColor: grid,
+      title: { text: '' }
+    },
+    plotOptions: {
+      series: { animation: { duration: 800 } },
+      pie: {
+        borderColor: pieBdr
+      }
+    },
+    _dark: isDark   // stash for chart-specific overrides
   }
 }
 
@@ -78,11 +96,11 @@ function AnimatedCounter({ value, duration = 1200 }) {
 function StatCard({ label, value, icon }) {
   return (
     <div className="bb-card p-5 flex flex-col gap-1 relative overflow-hidden group hover:shadow-md transition-shadow">
-      <div className="absolute top-3 right-3 text-2xl opacity-10 group-hover:opacity-20 transition-opacity">
+      <div className="absolute top-3 right-3 text-2xl opacity-40 group-hover:opacity-60 transition-opacity">
         {icon}
       </div>
       <div className="text-xs uppercase tracking-widest text-zinc-400 font-semibold">{label}</div>
-      <div className="text-3xl font-bold text-ink leading-none mt-1">
+      <div className="text-3xl font-bold text-ink dark:text-bone leading-none mt-1">
         <AnimatedCounter value={value} />
       </div>
     </div>
@@ -108,7 +126,7 @@ function RangePills({ value, onChange }) {
           className={`px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider rounded-md transition-all
             ${value === opt.value
               ? 'bg-cherry text-white shadow-sm'
-              : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+              : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
             }`}
         >
           {opt.label}
@@ -124,7 +142,7 @@ function ChartCard({ children, title, range, onRangeChange, className = '' }) {
     <div className={`bb-card p-5 ${className}`}>
       {(title || range !== undefined) && (
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-          {title && <h3 className="text-sm font-bold text-ink uppercase tracking-widest">{title}</h3>}
+          {title && <h3 className="text-sm font-bold text-ink dark:text-bone uppercase tracking-widest">{title}</h3>}
           {range !== undefined && onRangeChange && (
             <RangePills value={range} onChange={onRangeChange} />
           )}
@@ -146,7 +164,7 @@ function ActivityFeed({ items = [] }) {
         <div key={i} className="flex items-start gap-3">
           <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${item.type === 'order' ? 'bg-cherry' : 'bg-zinc-400'}`} />
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-ink leading-snug truncate">{item.text}</p>
+            <p className="text-sm text-ink dark:text-zinc-200 leading-snug truncate">{item.text}</p>
             <p className="text-[11px] text-zinc-400 mt-0.5">{item.time}</p>
           </div>
         </div>
@@ -169,6 +187,10 @@ function dayLabels(arr, maxTicks = 7) {
    MAIN DASHBOARD COMPONENT
    ═══════════════════════════════════════════════════ */
 export default function DashboardAdmin() {
+  const { mode } = useTheme()
+  const isDark = mode === 'dark'
+  const HC_BASE = useMemo(() => buildHcBase(isDark), [isDark])
+
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
@@ -255,13 +277,13 @@ export default function DashboardAdmin() {
     plotOptions: {
       areaspline: {
         fillOpacity: 0.08,
-        marker: { enabled: true, symbol: 'circle', radius: 4, lineWidth: 2, lineColor: '#ffffff' },
+        marker: { enabled: true, symbol: 'circle', radius: 4, lineWidth: 2, lineColor: isDark ? '#18181b' : '#ffffff' },
         lineWidth: 2.5
       }
     },
     series: [
       { name: 'Orders', data: filteredOrders.map(d => d.count), color: CHERRY },
-      { name: 'Inquiries', data: filteredInquiries.map(d => d.count), color: '#1e293b' }
+      { name: 'Inquiries', data: filteredInquiries.map(d => d.count), color: isDark ? '#94a3b8' : '#1e293b' }
     ]
   })
 
@@ -274,11 +296,11 @@ export default function DashboardAdmin() {
       pie: {
         innerSize: '60%',
         borderWidth: 2,
-        borderColor: '#ffffff',
+        borderColor: isDark ? '#27272a' : '#ffffff',
         dataLabels: {
           enabled: true,
           format: '<b>{point.name}</b>: {point.y}',
-          style: { fontSize: '11px', fontWeight: '500', color: INK, textOutline: 'none' }
+          style: { fontSize: '11px', fontWeight: '500', color: isDark ? '#e4e4e7' : INK, textOutline: 'none' }
         }
       }
     },
@@ -320,7 +342,7 @@ export default function DashboardAdmin() {
           linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
           stops: [[0, 'rgba(210,4,45,0.2)'], [1, 'rgba(210,4,45,0.01)']]
         },
-        marker: { enabled: false },
+        marker: { enabled: true, symbol: 'circle', radius: 4, lineWidth: 2, lineColor: isDark ? '#18181b' : '#ffffff' },
         lineWidth: 2.5,
         lineColor: CHERRY
       }
@@ -330,10 +352,26 @@ export default function DashboardAdmin() {
 
   // 6. Most Visited Pages (horizontal bar)
   const topPages = visits_by_page.slice(0, 8)
+  const fmtShort = (iso) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
   const pagesOpts = merge(HC_BASE, {
     chart: { type: 'bar', height: 280 },
     title: { text: 'Most Visited Pages' },
-    xAxis: { categories: topPages.map(d => d.page || '/') },
+    xAxis: {
+      categories: topPages.map(d => {
+        const page = d.page || '/'
+        const first = fmtShort(d.first_visit)
+        const last = fmtShort(d.last_visit)
+        const range = first && last && first !== last
+          ? `${first} – ${last}`
+          : first || ''
+        return range ? `${page}  <span style="font-size:9px;opacity:0.55">${range}</span>` : page
+      }),
+      labels: { useHTML: true }
+    },
     yAxis: { allowDecimals: false },
     legend: { enabled: false },
     plotOptions: { bar: { borderRadius: 4, borderWidth: 0, color: CHERRY } },
@@ -349,10 +387,10 @@ export default function DashboardAdmin() {
       pie: {
         innerSize: '55%',
         borderWidth: 2,
-        borderColor: '#ffffff',
+        borderColor: isDark ? '#27272a' : '#ffffff',
         dataLabels: {
           format: '<b>{point.name}</b>: {point.y}',
-          style: { fontSize: '11px', fontWeight: '500', color: INK, textOutline: 'none' }
+          style: { fontSize: '11px', fontWeight: '500', color: isDark ? '#e4e4e7' : INK, textOutline: 'none' }
         }
       }
     },
