@@ -27,7 +27,7 @@ export default function Footer() {
             <div>Sun: Closed</div>
           </div>
           <div className="mt-6 text-xs uppercase tracking-widest opacity-60">
-            © {new Date().getFullYear()} BlackBox Confections
+            © 2020 BlackBox Confections
           </div>
         </div>
       </div>

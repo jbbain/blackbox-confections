@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from .db import get_db
 from . import crud, schemas
-from .emailer import send_order_email, send_contact_email
+from .emailer import send_order_email, send_order_confirmation_email, send_contact_email
 
 router = APIRouter()
 
@@ -59,6 +59,10 @@ async def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db))
         await send_order_email(obj)
     except Exception as e:
         print(f"Failed to send order email: {e}")
+    try:
+        await send_order_confirmation_email(obj)
+    except Exception as e:
+        print(f"Failed to send order confirmation email: {e}")
     return obj
 
 @router.put("/orders/{order_id}", response_model=schemas.OrderOut)
