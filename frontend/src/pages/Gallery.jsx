@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react"
 import { useLocation } from "react-router-dom"
 import Section from "../components/Section"
 import { api } from "../lib/api"
+import useScrollReveal from "../hooks/useScrollReveal"
 
 export default function Gallery() {
   const [items, setItems] = useState([])
   const [activeIndex, setActiveIndex] = useState(null)
+  const [imageKey, setImageKey] = useState(0)
   const location = useLocation()
   const thumbRefs = useRef([])
+  const [gridRef, gridVisible] = useScrollReveal({ threshold: 0.05 })
 
   useEffect(() => {
     api.listGallery().then(setItems)
@@ -64,17 +67,19 @@ export default function Gallery() {
     return `${import.meta.env.VITE_API_BASE?.replace("/api", "") || "http://localhost:8000"}${path}`
   }
 
-  const openCarousel = (index) => setActiveIndex(index)
+  const openCarousel = (index) => { setActiveIndex(index); setImageKey(k => k + 1) }
   const closeCarousel = () => setActiveIndex(null)
 
   const showPrev = (e) => {
     e.stopPropagation()
     setActiveIndex((prev) => (prev - 1 + items.length) % items.length)
+    setImageKey(k => k + 1)
   }
 
   const showNext = (e) => {
     e.stopPropagation()
     setActiveIndex((prev) => (prev + 1) % items.length)
+    setImageKey(k => k + 1)
   }
 
   const activeItem = activeIndex !== null ? items[activeIndex] : null
@@ -82,16 +87,17 @@ export default function Gallery() {
   return (
     <>
       <Section title="Our Creations">
-        <div className="grid md:grid-cols-3 gap-6">
+        <div ref={gridRef} className="grid md:grid-cols-3 gap-6">
           {items.map((g, index) => (
             <button
               key={g.id}
               id={`cake-${g.id}`}
               type="button"
               onClick={() => openCarousel(index)}
-              className="bb-card overflow-hidden text-left transition-transform duration-200 hover:scale-[1.01]"
+              className={`gallery-card bb-card overflow-hidden text-left reveal fade-up ${gridVisible ? 'visible' : ''}`}
+              style={{ animationDelay: `${(index % 3) * 0.1}s` }}
             >
-              <div className="aspect-[4/3]">
+              <div className="aspect-[4/3] overflow-hidden">
                 <img
                   src={resolveImageUrl(g.image_url)}
                   alt={g.caption || "Gallery item"}
@@ -109,7 +115,7 @@ export default function Gallery() {
 
       {activeItem && (
         <div
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 carousel-overlay"
           onClick={closeCarousel}
         >
           <button
@@ -146,9 +152,10 @@ export default function Gallery() {
           >
             <div className="flex-1 flex items-center justify-center overflow-hidden min-h-0">
               <img
+                key={imageKey}
                 src={resolveImageUrl(activeItem.image_url)}
                 alt={activeItem.caption || "Gallery item"}
-                className="max-w-full max-h-full object-contain"
+                className="max-w-full max-h-full object-contain carousel-image"
               />
             </div>
 
