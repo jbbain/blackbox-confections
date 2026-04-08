@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Section from '../components/Section'
 import { api, resolveImageUrl } from '../lib/api'
 import { useAdminAuth } from '../state/adminAuth'
+import DashboardAdmin from './DashboardAdmin'
 
 function TabButton({ active, children, onClick }) {
   return (
@@ -21,11 +22,10 @@ export default function Admin() {
   const [pw, setPw] = useState('')
   const [loginErr, setLoginErr] = useState('')
 
-  const [tab, setTab] = useState('products')
+  const [tab, setTab] = useState('dashboard')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [reviews, setReviews] = useState([])
   const [gallery, setGallery] = useState([])
@@ -36,15 +36,13 @@ export default function Admin() {
     setLoading(true)
 
     try {
-      const [p, o, r, g, c] = await Promise.all([
-        api.listProducts ? api.listProducts(false) : Promise.resolve([]),
+      const [o, r, g, c] = await Promise.all([
         api.listOrders(),
         api.listReviews(false),
         api.listGallery(),
         api.listContacts()
       ])
 
-      setProducts(p)
       setOrders(o)
       setReviews(r)
       setGallery(g)
@@ -125,12 +123,12 @@ export default function Admin() {
           <div className="bb-label text-cherry">Admin</div>
           <h1 className="bb-h1 mt-3">Dashboard</h1>
           <p className="mt-6 text-base md:text-lg bb-muted leading-relaxed max-w-3xl">
-            Manage products, custom order requests, reviews, gallery items, and contact messages.
+            Manage custom order requests, reviews, gallery items, and contact messages.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <TabButton active={tab === 'products'} onClick={() => setTab('products')}>
-              Products
+            <TabButton active={tab === 'dashboard'} onClick={() => setTab('dashboard')}>
+              Dashboard
             </TabButton>
 
             <TabButton active={tab === 'orders'} onClick={() => setTab('orders')}>
@@ -162,13 +160,7 @@ export default function Admin() {
         </div>
       </section>
 
-      {tab === 'products' && (
-        <ProductsAdmin
-          products={products}
-          setProducts={setProducts}
-          setError={setError}
-        />
-      )}
+      {tab === 'dashboard' && <DashboardAdmin />}
 
       {tab === 'orders' && (
         <OrdersAdmin orders={orders} setOrders={setOrders} setError={setError} />
@@ -198,410 +190,6 @@ export default function Admin() {
         />
       )}
     </>
-  )
-}
-
-function ProductsAdmin({ products, setProducts, setError }) {
-  const categoryOptions = [
-    'Baked Goods',
-    'Cupcake',
-    'One-Tier Cake',
-    'Three-Tier Cake',
-    'Two-Tier Cake'
-  ].sort()
-
-  const [draft, setDraft] = useState({
-    name: '',
-    description: '',
-    price: 0,
-    image_url: '',
-    category: 'Baked Goods',
-    is_active: true,
-    image_scale: 1,
-    image_x: 0,
-    image_y: 0
-  })
-
-  const [editingId, setEditingId] = useState(null)
-
-  const dragRef = useRef({
-    dragging: false,
-    startX: 0,
-    startY: 0,
-    originX: 0,
-    originY: 0
-  })
-
-  const startEdit = (p) => {
-    setEditingId(p.id)
-    setDraft({
-      name: p.name ?? '',
-      description: p.description ?? '',
-      price: p.price ?? 0,
-      image_url: p.image_url ?? '',
-      category: p.category ?? 'Baked Goods',
-      is_active: p.is_active ?? true,
-      image_scale: p.image_scale ?? 1,
-      image_x: p.image_x ?? 0,
-      image_y: p.image_y ?? 0
-    })
-  }
-
-  const reset = () => {
-    setEditingId(null)
-    setDraft({
-      name: '',
-      description: '',
-      price: 0,
-      image_url: '',
-      category: 'Baked Goods',
-      is_active: true,
-      image_scale: 1,
-      image_x: 0,
-      image_y: 0
-    })
-  }
-
-  const resetImagePosition = () => {
-    setDraft((prev) => ({
-      ...prev,
-      image_scale: 1,
-      image_x: 0,
-      image_y: 0
-    }))
-  }
-
-  const save = async () => {
-    setError('')
-
-    try {
-      const payload = {
-        ...draft,
-        price: Number(draft.price || 0),
-        image_scale: Number(draft.image_scale || 1),
-        image_x: Number(draft.image_x || 0),
-        image_y: Number(draft.image_y || 0)
-      }
-
-      if (editingId) {
-        const updated = await api.updateProduct(editingId, payload)
-        setProducts((prev) => prev.map((p) => (p.id === editingId ? updated : p)))
-      } else {
-        const created = await api.createProduct(payload)
-        setProducts((prev) => [created, ...prev])
-      }
-
-      reset()
-    } catch (e) {
-      setError(e.message || 'Failed to save product.')
-    }
-  }
-
-  const del = async (id) => {
-    setError('')
-
-    try {
-      await api.deleteProduct(id)
-      setProducts((prev) => prev.filter((p) => p.id !== id))
-    } catch (e) {
-      setError(e.message || 'Failed to delete product.')
-    }
-  }
-
-  const onImagePointerDown = (e) => {
-    if (!draft.image_url) return
-
-    dragRef.current = {
-      dragging: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: draft.image_x || 0,
-      originY: draft.image_y || 0
-    }
-  }
-
-  const onImagePointerMove = (e) => {
-    if (!dragRef.current.dragging) return
-
-    const dx = e.clientX - dragRef.current.startX
-    const dy = e.clientY - dragRef.current.startY
-
-    setDraft((prev) => ({
-      ...prev,
-      image_x: dragRef.current.originX + dx,
-      image_y: dragRef.current.originY + dy
-    }))
-  }
-
-  const onImagePointerUp = () => {
-    dragRef.current.dragging = false
-  }
-
-  return (
-    <Section eyebrow="Manage" title="Products">
-      <div className="grid md:grid-cols-12 gap-8">
-        <div className="md:col-span-5">
-          <div className="bb-card p-6">
-            <div className="bb-label">
-              {editingId ? `Editing #${editingId}` : 'New product'}
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <Field label="Name">
-                <input
-                  className="bb-input"
-                  value={draft.name}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Category">
-                <select
-                  className="bb-input"
-                  value={draft.category}
-                  onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                >
-                  {categoryOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Product Image">
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="bb-input"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-
-                      const reader = new FileReader()
-                      reader.onloadend = () => {
-                        setDraft((current) => ({
-                          ...current,
-                          image_url: reader.result,
-                          image_scale: 1,
-                          image_x: 0,
-                          image_y: 0
-                        }))
-                      }
-                      reader.readAsDataURL(file)
-                    }}
-                  />
-
-                  <div>
-                    <div className="bb-label mb-2">Or paste image URL</div>
-                    <input
-                      className="bb-input"
-                      value={draft.image_url}
-                      onChange={(e) =>
-                        setDraft({
-                          ...draft,
-                          image_url: e.target.value
-                        })
-                      }
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-              </Field>
-
-              <Field label="Price">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="bb-input"
-                  value={draft.price}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      price: Number(e.target.value || 0)
-                    })
-                  }
-                />
-              </Field>
-
-              <Field label="Description">
-                <textarea
-                  className="bb-input min-h-[110px]"
-                  value={draft.description}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      description: e.target.value
-                    })
-                  }
-                />
-              </Field>
-
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={draft.is_active}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        is_active: e.target.checked
-                      })
-                    }
-                  />
-                  Active
-                </label>
-
-                <div className="flex gap-2">
-                  {editingId && (
-                    <button className="bb-btn" type="button" onClick={reset}>
-                      Cancel
-                    </button>
-                  )}
-
-                  <button className="bb-btn bb-btn-accent" type="button" onClick={save}>
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="md:col-span-7 space-y-6">
-          <div className="bb-card p-6">
-            <div className="bb-label">Live Preview</div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                className="bb-btn"
-                type="button"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    image_scale: Number((prev.image_scale + 0.1).toFixed(2))
-                  }))
-                }
-              >
-                Zoom In
-              </button>
-
-              <button
-                className="bb-btn"
-                type="button"
-                onClick={() =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    image_scale: Math.max(0.2, Number((prev.image_scale - 0.1).toFixed(2)))
-                  }))
-                }
-              >
-                Zoom Out
-              </button>
-
-              <button className="bb-btn" type="button" onClick={resetImagePosition}>
-                Reset Crop
-              </button>
-            </div>
-
-            <div className="mt-4 bb-card p-5">
-              <div
-                className="aspect-[4/3] bg-black/5 dark:bg-white/5 overflow-hidden relative cursor-move select-none"
-                onPointerDown={onImagePointerDown}
-                onPointerMove={onImagePointerMove}
-                onPointerUp={onImagePointerUp}
-                onPointerLeave={onImagePointerUp}
-              >
-                {draft.image_url ? (
-                  <img
-                    src={draft.image_url}
-                    alt={draft.name || 'Preview'}
-                    draggable={false}
-                    style={{
-                      transform: `translate(${draft.image_x}px, ${draft.image_y}px) scale(${draft.image_scale})`,
-                      transformOrigin: 'center center'
-                    }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full grid place-items-center text-xs uppercase tracking-widest opacity-60">
-                    No image selected
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 flex items-start justify-between gap-4">
-                <div>
-                  <div className="font-display text-xl leading-tight">
-                    {draft.name || 'Product Name'}
-                  </div>
-                  <div className="text-xs uppercase tracking-widest opacity-70 mt-1">
-                    {draft.category || 'Category'}
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-sm uppercase tracking-widest opacity-70">Price</div>
-                  <div className="font-display text-xl">
-                    ${Number(draft.price || 0).toFixed(2)}
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-sm bb-muted mt-3 leading-relaxed">
-                {draft.description ||
-                  'Your product preview will appear here as customers would see it.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="bb-card p-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase tracking-widest opacity-70">
-                <tr className="border-b border-black/10 dark:border-white/10">
-                  <th className="py-3 text-left">Name</th>
-                  <th className="py-3 text-left">Category</th>
-                  <th className="py-3 text-left">Price</th>
-                  <th className="py-3 text-left">Active</th>
-                  <th className="py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id} className="border-b border-black/10 dark:border-white/10">
-                    <td className="py-3">{p.name}</td>
-                    <td className="py-3 bb-muted">{p.category}</td>
-                    <td className="py-3">${Number(p.price || 0).toFixed(2)}</td>
-                    <td className="py-3">{p.is_active ? 'Yes' : 'No'}</td>
-                    <td className="py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button className="bb-btn" type="button" onClick={() => startEdit(p)}>
-                          Edit
-                        </button>
-                        <button className="bb-btn" type="button" onClick={() => del(p.id)}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-
-                {!products.length && (
-                  <tr>
-                    <td className="py-6 bb-muted" colSpan="5">
-                      No products yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </Section>
   )
 }
 

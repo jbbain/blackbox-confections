@@ -10,17 +10,26 @@ LOGO_PATH = BASE_DIR / "static" / "logo.png"
 # Fix macOS Python SSL: CERTIFICATE_VERIFY_FAILED
 os.environ["SSL_CERT_FILE"] = certifi.where()
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=settings.mail_username,
-    MAIL_PASSWORD=settings.mail_password,
-    MAIL_FROM=settings.mail_from,
-    MAIL_PORT=settings.mail_port,
-    MAIL_SERVER=settings.mail_server,
-    MAIL_FROM_NAME=settings.mail_from_name,
-    MAIL_STARTTLS=settings.mail_starttls,
-    MAIL_SSL_TLS=settings.mail_ssl_tls,
-    USE_CREDENTIALS=True,
-)
+# Lazy init — ConnectionConfig validates email at construction,
+# so we defer until actually sending to avoid crashing on startup
+# when .env isn't loaded (e.g. missing mail credentials).
+_conf = None
+
+def _get_conf():
+    global _conf
+    if _conf is None:
+        _conf = ConnectionConfig(
+            MAIL_USERNAME=settings.mail_username,
+            MAIL_PASSWORD=settings.mail_password,
+            MAIL_FROM=settings.mail_from,
+            MAIL_PORT=settings.mail_port,
+            MAIL_SERVER=settings.mail_server,
+            MAIL_FROM_NAME=settings.mail_from_name,
+            MAIL_STARTTLS=settings.mail_starttls,
+            MAIL_SSL_TLS=settings.mail_ssl_tls,
+            USE_CREDENTIALS=True,
+        )
+    return _conf
 
 async def send_order_email(order):
     # Format event_date from "2026-04-07" to "Apr 7, 2026"
@@ -227,7 +236,7 @@ async def send_order_email(order):
         }],
     )
 
-    fm = FastMail(conf)
+    fm = FastMail(_get_conf())
     await fm.send_message(message)
 
 
@@ -374,7 +383,7 @@ async def send_order_confirmation_email(order):
         }],
     )
 
-    fm = FastMail(conf)
+    fm = FastMail(_get_conf())
     await fm.send_message(message)
 
 
@@ -530,7 +539,7 @@ async def send_contact_email(contact):
         }],
     )
 
-    fm = FastMail(conf)
+    fm = FastMail(_get_conf())
     await fm.send_message(message)
 
 
@@ -624,5 +633,5 @@ async def send_inquiry_confirmation_email(contact):
         }],
     )
 
-    fm = FastMail(conf)
+    fm = FastMail(_get_conf())
     await fm.send_message(message)

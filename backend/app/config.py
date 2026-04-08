@@ -1,13 +1,22 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+# Resolve paths relative to the backend/ directory (parent of app/)
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
 
-    database_url: str = "sqlite:///./blackbox.db"
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(_BACKEND_DIR / ".env"),
+        extra="ignore",
+    )
+
+    database_url: str = f"sqlite:///{_BACKEND_DIR / 'blackbox.db'}"
     cors_origins: str = (
         "http://localhost:5173,"
+        "http://localhost:5174,"
         "http://127.0.0.1:5173,"
+        "http://127.0.0.1:5174,"
         "https://blackboxconfections.com,"
         "https://www.blackboxconfections.com"
     )

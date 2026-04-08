@@ -60,3 +60,9 @@ class ContactMessage(Base):
     subject: Mapped[str] = mapped_column(String(200), default="General Inquiry")
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+class PageVisit(Base):
+    __tablename__ = "page_visits"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    page: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    visited_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

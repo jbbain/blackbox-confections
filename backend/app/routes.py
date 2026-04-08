@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, cast, Date
+from datetime import datetime, timedelta
 from .db import get_db
-from . import crud, schemas
+from . import crud, schemas, models
 from .emailer import send_order_email, send_order_confirmation_email, send_contact_email, send_inquiry_confirmation_email
 
 router = APIRouter()
@@ -149,3 +151,152 @@ def delete_contact(contact_id: int, db: Session = Depends(get_db)):
     if not ok:
         raise HTTPException(status_code=404, detail="Contact message not found")
     return {"deleted": True}
+
+# -------- Page Visit Tracking --------
+@router.post("/track")
+def track_page_visit(body: dict, db: Session = Depends(get_db)):
+    page = body.get("page", "/")
+    visit = models.PageVisit(page=page)
+    db.add(visit)
+    db.commit()
+    return {"ok": True}
+
+# -------- Analytics / Dashboard --------
+@router.get("/analytics/summary")
+def analytics_summary(days: int = Query(30, ge=1, le=365), db: Session = Depends(get_db)):
+    """Return aggregate counts and time-series data for the admin dashboard."""
+    now = datetime.utcnow()
+    cutoff = now - timedelta(days=days)
+
+    # Counts
+    total_orders = db.query(func.count(models.Order.id)).scalar() or 0
+    total_inquiries = db.query(func.count(models.ContactMessage.id)).scalar() or 0
+    total_reviews = db.query(func.count(models.Review.id)).scalar() or 0
+    total_gallery = db.query(func.count(models.GalleryItem.id)).scalar() or 0
+    total_visits = db.query(func.count(models.PageVisit.id)).scalar() or 0
+
+    # Orders by status
+    order_statuses = (
+        db.query(models.Order.status, func.count(models.Order.id))
+        .group_by(models.Order.status)
+        .all()
+    )
+    status_map = {s: c for s, c in order_statuses}
+
+    # Orders per day (last 30 days)
+    orders_by_day = (
+        db.query(
+            func.date(models.Order.created_at).label("day"),
+            func.count(models.Order.id)
+        )
+        .filter(models.Order.created_at >= cutoff)
+        .group_by("day")
+        .order_by("day")
+        .all()
+    )
+
+    # Inquiries per day
+    inquiries_by_day = (
+        db.query(
+            func.date(models.ContactMessage.created_at).label("day"),
+            func.count(models.ContactMessage.id)
+        )
+        .filter(models.ContactMessage.created_at >= cutoff)
+        .group_by("day")
+        .order_by("day")
+        .all()
+    )
+
+    # Page visits per day
+    visits_by_day = (
+        db.query(
+            func.date(models.PageVisit.visited_at).label("day"),
+            func.count(models.PageVisit.id)
+        )
+        .filter(models.PageVisit.visited_at >= cutoff)
+        .group_by("day")
+        .order_by("day")
+        .all()
+    )
+
+    # Page visits by page
+    visits_by_page = (
+        db.query(models.PageVisit.page, func.count(models.PageVisit.id))
+        .group_by(models.PageVisit.page)
+        .order_by(func.count(models.PageVisit.id).desc())
+        .all()
+    )
+
+    # Dessert type breakdown
+    dessert_types = (
+        db.query(models.Order.dessert_type, func.count(models.Order.id))
+        .filter(models.Order.dessert_type != "")
+        .group_by(models.Order.dessert_type)
+        .order_by(func.count(models.Order.id).desc())
+        .all()
+    )
+
+    # Event type breakdown
+    event_types = (
+        db.query(models.Order.event_type, func.count(models.Order.id))
+        .filter(models.Order.event_type != "")
+        .group_by(models.Order.event_type)
+        .order_by(func.count(models.Order.id).desc())
+        .all()
+    )
+
+    # Inquiry subject breakdown
+    inquiry_subjects = (
+        db.query(models.ContactMessage.subject, func.count(models.ContactMessage.id))
+        .group_by(models.ContactMessage.subject)
+        .order_by(func.count(models.ContactMessage.id).desc())
+        .all()
+    )
+
+    # Recent activity feed (last 10 orders + inquiries, merged by time)
+    recent_orders = (
+        db.query(models.Order)
+        .order_by(models.Order.created_at.desc())
+        .limit(5)
+        .all()
+    )
+    recent_contacts = (
+        db.query(models.ContactMessage)
+        .order_by(models.ContactMessage.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    activity = []
+    for o in recent_orders:
+        activity.append({
+            "type": "order",
+            "text": f"{o.customer_name} submitted an order ({o.dessert_type or 'custom'})",
+            "time": o.created_at.isoformat() if o.created_at else ""
+        })
+    for c in recent_contacts:
+        activity.append({
+            "type": "inquiry",
+            "text": f"{c.name} sent an inquiry ({c.subject})",
+            "time": c.created_at.isoformat() if c.created_at else ""
+        })
+    activity.sort(key=lambda x: x["time"], reverse=True)
+
+    return {
+        "totals": {
+            "orders": total_orders,
+            "inquiries": total_inquiries,
+            "reviews": total_reviews,
+            "gallery": total_gallery,
+            "visits": total_visits
+        },
+        "order_statuses": status_map,
+        "orders_by_day": [{"day": str(d), "count": c} for d, c in orders_by_day],
+        "inquiries_by_day": [{"day": str(d), "count": c} for d, c in inquiries_by_day],
+        "visits_by_day": [{"day": str(d), "count": c} for d, c in visits_by_day],
+        "visits_by_page": [{"page": p, "count": c} for p, c in visits_by_page],
+        "dessert_types": [{"type": t, "count": c} for t, c in dessert_types],
+        "event_types": [{"type": t, "count": c} for t, c in event_types],
+        "inquiry_subjects": [{"subject": s, "count": c} for s, c in inquiry_subjects],
+        "activity": activity[:10]
+    }
