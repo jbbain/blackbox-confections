@@ -193,12 +193,141 @@ export default function Admin() {
   )
 }
 
+/* ── order progress steps ─────────────────────────── */
+const ORDER_STEPS = [
+  { key: 'new',         emoji: '📋', label: 'Received' },
+  { key: 'in_progress', emoji: '🧑🏿‍🍳', label: 'In Progress' },
+  { key: 'ready',       emoji: '🎂', label: 'Ready' },
+  { key: 'completed',   emoji: '🎉', label: 'Completed' },
+]
+
+/* ── tiny fireworks confetti ─────────────────────── */
+function Fireworks() {
+  const particles = Array.from({ length: 40 }, (_, i) => {
+    const angle = (i / 40) * 360
+    const dist = 40 + Math.random() * 60
+    const size = 4 + Math.random() * 6
+    const colors = ['#D2042D', '#f59e0b', '#10b981', '#6366f1', '#ec4899', '#14b8a6']
+    const color = colors[Math.floor(Math.random() * colors.length)]
+    const delay = Math.random() * 0.3
+    return { angle, dist, size, color, delay }
+  })
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-10">
+      {particles.map((p, i) => (
+        <span
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: '50%',
+            top: '40%',
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            animation: `firework-particle 0.9s ${p.delay}s ease-out forwards`,
+            '--fw-x': `${Math.cos(p.angle * Math.PI / 180) * p.dist}px`,
+            '--fw-y': `${Math.sin(p.angle * Math.PI / 180) * p.dist}px`,
+          }}
+        />
+      ))}
+      <style>{`
+        @keyframes firework-particle {
+          0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+          100% { transform: translate(calc(-50% + var(--fw-x)), calc(-50% + var(--fw-y))) scale(0); opacity: 0; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+/* ── progress tracker bar ────────────────────────── */
+function OrderTracker({ status, onStepClick }) {
+  const isCancelled = status === 'cancelled'
+  const currentIdx = ORDER_STEPS.findIndex(s => s.key === status)
+  const isCompleted = status === 'completed'
+
+  return (
+    <div className={`relative ${isCancelled ? 'opacity-40 grayscale' : ''}`}>
+      <div className="flex items-center justify-between">
+        {ORDER_STEPS.map((step, i) => {
+          const reached = currentIdx >= i
+          const isActive = currentIdx === i
+
+          return (
+            <React.Fragment key={step.key}>
+              {/* connector line */}
+              {i > 0 && (
+                <div className="flex-1 h-1 mx-1 rounded-full transition-colors duration-500"
+                  style={{
+                    backgroundColor: currentIdx >= i
+                      ? (isCompleted ? '#10b981' : '#D2042D')
+                      : '#e5e7eb'
+                  }}
+                />
+              )}
+
+              {/* step circle */}
+              <button
+                type="button"
+                onClick={() => !isCancelled && onStepClick(step.key)}
+                disabled={isCancelled}
+                className={`
+                  relative flex flex-col items-center gap-1 group
+                  ${isCancelled ? 'cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                title={`Set to ${step.label}`}
+              >
+                <div
+                  className={`
+                    w-11 h-11 rounded-full flex items-center justify-center text-lg
+                    transition-all duration-500 border-2
+                    ${reached
+                      ? isCompleted
+                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200'
+                        : 'bg-cherry border-cherry text-white shadow-lg shadow-red-200'
+                      : 'bg-white border-zinc-200 text-zinc-400'
+                    }
+                    ${isActive && !isCompleted ? 'ring-4 ring-red-100 scale-110' : ''}
+                    ${isActive && isCompleted ? 'ring-4 ring-emerald-100 scale-110' : ''}
+                    ${!isCancelled ? 'group-hover:scale-110' : ''}
+                  `}
+                >
+                  <span className={`transition-transform ${isActive ? 'animate-bounce' : ''}`}>
+                    {step.emoji}
+                  </span>
+                </div>
+                <span className={`
+                  text-[10px] font-semibold uppercase tracking-wider
+                  ${reached
+                    ? isCompleted ? 'text-emerald-600' : 'text-cherry'
+                    : 'text-zinc-400'
+                  }
+                `}>
+                  {step.label}
+                </span>
+              </button>
+            </React.Fragment>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function OrdersAdmin({ orders, setOrders, setError }) {
+  const [fireworksId, setFireworksId] = useState(null)
+
   const updateStatus = async (id, status) => {
     setError('')
     try {
       const updated = await api.updateOrder(id, { status })
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)))
+
+      if (status === 'completed') {
+        setFireworksId(id)
+        setTimeout(() => setFireworksId(null), 1200)
+      }
     } catch (e) {
       setError(e.message || 'Failed to update order request.')
     }

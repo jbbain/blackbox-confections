@@ -58,5 +58,8 @@ export const api = {
   trackVisit: (page) => request('/track', { method: 'POST', body: JSON.stringify({ page }) }).catch(() => {}),
 
   // analytics
-  getAnalytics: (days = 30) => request(`/analytics/summary?days=${days}`)
+  getAnalytics: (days = 30) => request(`/analytics/summary?days=${days}`),
+
+  // vercel web analytics
+  getVercelAnalytics: () => request('/analytics/vercel')
 }

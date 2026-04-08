@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ThemeProvider } from './state/theme'
 import { AdminAuthProvider } from './state/adminAuth'
+import { Analytics } from '@vercel/analytics/react'
 
 // ── Google Analytics 4 ──
 ;(function initGA() {
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <AdminAuthProvider>
           <BrowserRouter>
             <App />
+            <Analytics />
           </BrowserRouter>
       </AdminAuthProvider>
     </ThemeProvider>

@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     mail_starttls: bool = True
     mail_ssl_tls: bool = False
 
+    vercel_api_token: str = ""
+    vercel_project_id: str = ""
+
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
