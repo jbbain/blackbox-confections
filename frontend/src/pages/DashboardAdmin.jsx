@@ -499,7 +499,7 @@ export default function DashboardAdmin() {
         [0.6, '#ef4444'],
         [1,   CHERRY]
       ],
-      labels: { style: { color: MUTED, fontSize: '10px' } }
+      labels: { style: { color: muted, fontSize: '10px' } }
     },
     legend: {
       layout: 'horizontal',
