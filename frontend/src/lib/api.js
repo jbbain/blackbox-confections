@@ -21,15 +21,32 @@ async function submitToGoogleScript(payload) {
   return { success: true, ...payload }
 }
 
-async function getFromGoogleScript(action) {
-  const res = await fetch(`${GOOGLE_SHEETS_URL}?action=${action}`)
-  const data = await res.json()
+function getFromGoogleScript(action) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `bbCallback_${Date.now()}_${Math.round(Math.random() * 100000)}`
 
-  if (!data.success) {
-    throw new Error(data.message || 'Request failed.')
-  }
+    window[callbackName] = (data) => {
+      delete window[callbackName]
+      script.remove()
 
-  return data.items || []
+      if (!data.success) {
+        reject(new Error(data.message || 'Request failed.'))
+        return
+      }
+
+      resolve(data.items || [])
+    }
+
+    const script = document.createElement('script')
+    script.src = `${GOOGLE_SHEETS_URL}?action=${action}&callback=${callbackName}`
+    script.onerror = () => {
+      delete window[callbackName]
+      script.remove()
+      reject(new Error('Failed to load Google Sheet data.'))
+    }
+
+    document.body.appendChild(script)
+  })
 }
 
 export const api = {
