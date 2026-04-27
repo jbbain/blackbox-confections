@@ -1,36 +1,10 @@
-const API_BASE =
-  import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'
-
-export const ASSET_BASE = API_BASE.replace('/api', '')
-
-export function resolveImageUrl(path) {
-  if (!path) return ''
-  if (path.startsWith('http') || path.startsWith('data:')) return path
-  return `${ASSET_BASE}${path}`
-}
-
 export const GOOGLE_SHEETS_URL =
   import.meta.env.VITE_GOOGLE_SCRIPT_URL ||
   'https://script.google.com/macros/s/AKfycbzm9JBn999NpW8SY3uP-wGedxqYXbnV5vSpDRUN7zrwUsg9HaB0BwG85ehcZO1f1ZJdfA/exec'
 
-async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
-    ...options
-  })
-
-  if (!res.ok) {
-    let msg = 'Request failed'
-    try {
-      msg = (await res.json()).detail || msg
-    } catch {}
-    throw new Error(msg)
-  }
-
-  return res.json()
+export function resolveImageUrl(path) {
+  if (!path) return ''
+  return path
 }
 
 async function submitToGoogleScript(payload) {
@@ -44,62 +18,108 @@ async function submitToGoogleScript(payload) {
     body: JSON.stringify(payload)
   })
 
-  return { success: true }
+  return { success: true, ...payload }
 }
 
-async function getFromGoogleScript(action){
-  const res = await fetch(`${GOOGLE_SHEETS_URL}?action=${action}`);
-  const data = await res.json();
+async function getFromGoogleScript(action) {
+  const res = await fetch(`${GOOGLE_SHEETS_URL}?action=${action}`)
+  const data = await res.json()
 
   if (!data.success) {
-    throw new Error(data.message || "Request failed.");
+    throw new Error(data.message || 'Request failed.')
   }
 
-  return data.items || [];
+  return data.items || []
 }
 
 export const api = {
-  // orders/contact now go to Google Sheets
+  // Orders
   createOrder: (body) =>
     submitToGoogleScript({
       type: 'order',
       ...body
     }),
 
+  listOrders: () => getFromGoogleScript('orders'),
+
+  updateOrder: (id, body) =>
+    submitToGoogleScript({
+      type: 'updateOrder',
+      id,
+      ...body
+    }),
+
+  deleteOrder: (id) =>
+    submitToGoogleScript({
+      type: 'deleteOrder',
+      id
+    }),
+
+  // Contact
   sendContact: (body) =>
     submitToGoogleScript({
       type: 'contact',
       ...body
     }),
 
+  listContacts: () => getFromGoogleScript('contacts'),
+
+  deleteContact: (id) =>
+    submitToGoogleScript({
+      type: 'deleteContact',
+      id
+    }),
+
+  // Reviews
+  listReviews: () => getFromGoogleScript('reviews'),
+
   createReview: (body) =>
     submitToGoogleScript({
-      type: "review",
+      type: 'createReview',
       ...body
     }),
 
-    listGallery: () => getFromGoogleScript("gallery"),
-    listReviews: () => getFromGoogleScript("reviews"),
+  updateReview: (id, body) =>
+    submitToGoogleScript({
+      type: 'updateReview',
+      id,
+      ...body
+    }),
 
-  // backend-powered features
-  listOrders: () => request('/orders'),
-  updateOrder: (id, body) => request(`/orders/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deleteOrder: (id) => request(`/orders/${id}`, { method: 'DELETE' }),
+  deleteReview: (id) =>
+    submitToGoogleScript({
+      type: 'deleteReview',
+      id
+    }),
 
-  listReviews: (approvedOnly = true) => request(`/reviews?approved_only=${approvedOnly}`),
-  createReview: (body) => request('/reviews', { method: 'POST', body: JSON.stringify(body) }),
-  updateReview: (id, body) => request(`/reviews/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deleteReview: (id) => request(`/reviews/${id}`, { method: 'DELETE' }),
+  // Gallery
+  listGallery: () => getFromGoogleScript('gallery'),
 
-  listGallery: () => request('/gallery'),
-  createGallery: (body) => request('/gallery', { method: 'POST', body: JSON.stringify(body) }),
-  updateGallery: (id, body) => request(`/gallery/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-  deleteGallery: (id) => request(`/gallery/${id}`, { method: 'DELETE' }),
+  createGallery: (body) =>
+    submitToGoogleScript({
+      type: 'createGallery',
+      ...body
+    }),
 
-  listContacts: () => request('/contacts'),
-  deleteContact: (id) => request(`/contacts/${id}`, { method: 'DELETE' }),
+  updateGallery: (id, body) =>
+    submitToGoogleScript({
+      type: 'updateGallery',
+      id,
+      ...body
+    }),
 
-  trackVisit: (page) => request('/track', { method: 'POST', body: JSON.stringify({ page }) }).catch(() => {}),
-  getAnalytics: (days = 30) => request(`/analytics/summary?days=${days}`),
-  getVercelAnalytics: () => request('/analytics/vercel')
+  deleteGallery: (id) =>
+    submitToGoogleScript({
+      type: 'deleteGallery',
+      id
+    }),
+
+  // These are no-ops now unless you rebuild analytics later
+  trackVisit: () => Promise.resolve(),
+  getAnalytics: () => Promise.resolve(null),
+  getVercelAnalytics: () => Promise.resolve(null)
+
+  //trackVisit: (page) => request('/track', { method: 'POST', body: JSON.stringify({ page }) }).catch(() => {}),
+  //getAnalytics: (days = 30) => request(`/analytics/summary?days=${days}`),
+  //getVercelAnalytics: () => request('/analytics/vercel')
 }
