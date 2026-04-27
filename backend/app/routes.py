@@ -45,12 +45,17 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     return {"deleted": True}
 
 # -------- Orders --------
+# NOTE: Orders are now submitted directly to Google Sheets via frontend
+# These endpoints are kept for admin dashboard analytics only
+
 @router.get("/orders", response_model=list[schemas.OrderOut])
 def list_orders(db: Session = Depends(get_db)):
+    """Get historical orders from database (read-only for dashboard)."""
     return crud.list_orders(db)
 
 @router.get("/orders/{order_id}", response_model=schemas.OrderOut)
 def get_order(order_id: int, db: Session = Depends(get_db)):
+    """Get a specific historical order (read-only for dashboard)."""
     obj = crud.get_order(db, order_id)
     if not obj:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -58,6 +63,8 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
 
 @router.post("/orders", response_model=schemas.OrderOut)
 async def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db)):
+    """DEPRECATED: Orders are now submitted to Google Sheets directly from frontend.
+    This endpoint is maintained for backward compatibility only."""
     obj = crud.create_order(db, data)
     try:
         await send_order_email(obj)
@@ -71,6 +78,7 @@ async def create_order(data: schemas.OrderCreate, db: Session = Depends(get_db))
 
 @router.put("/orders/{order_id}", response_model=schemas.OrderOut)
 def update_order(order_id: int, data: schemas.OrderUpdate, db: Session = Depends(get_db)):
+    """Update a historical order record."""
     obj = crud.update_order(db, order_id, data)
     if not obj:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -78,6 +86,7 @@ def update_order(order_id: int, data: schemas.OrderUpdate, db: Session = Depends
 
 @router.delete("/orders/{order_id}")
 def delete_order(order_id: int, db: Session = Depends(get_db)):
+    """Delete a historical order record."""
     ok = crud.delete_order(db, order_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Order not found")

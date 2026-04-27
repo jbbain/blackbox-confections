@@ -27,23 +27,30 @@ export default function Order() {
 
   const validate = () => {
     const errs = {}
+
     if (!form.first_name.trim()) errs.first_name = 'First name is required.'
     if (!form.last_name.trim()) errs.last_name = 'Last name is required.'
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
     if (!form.customer_email.trim()) {
       errs.customer_email = 'Email is required.'
     } else if (!emailRegex.test(form.customer_email)) {
-      errs.customer_email = 'Please enter a valid email address (e.g. name@example.com).'
+      errs.customer_email = 'Please enter a valid email address.'
     }
+
     const phoneDigits = form.customer_phone.replace(/\D/g, '')
+
     if (!form.customer_phone.trim()) {
       errs.customer_phone = 'Phone number is required.'
     } else if (phoneDigits.length !== 10) {
       errs.customer_phone = 'Please enter a valid 10-digit US phone number.'
     }
+
     if (form.event_type === 'Other' && !form.custom_event_type.trim()) {
       errs.custom_event_type = 'Please specify your event type.'
     }
+
     return errs
   }
 
@@ -54,55 +61,72 @@ export default function Order() {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 
+  const resetForm = () => {
+    setForm({
+      prefix: '',
+      first_name: '',
+      last_name: '',
+      suffix: '',
+      customer_email: '',
+      customer_phone: '',
+      event_type: '',
+      custom_event_type: '',
+      dessert_type: '',
+      servings: '',
+      event_date: '',
+      pickup_or_delivery: 'pickup',
+      inspiration_notes: '',
+      color_theme: '',
+      flavor_preferences: ''
+    })
+  }
+
   const onSubmit = async (e) => {
     e.preventDefault()
-    console.log('Order form submit fired', form)
     setStatus({ kind: '', msg: '' })
 
     const validationErrors = validate()
     setErrors(validationErrors)
+
     if (Object.keys(validationErrors).length > 0) return
 
     try {
       const payload = { ...form }
+
       const nameParts = [
         payload.prefix,
         payload.first_name.trim(),
         payload.last_name.trim(),
         payload.suffix
       ].filter(Boolean)
+
       payload.customer_name = nameParts.join(' ')
+
       delete payload.prefix
       delete payload.first_name
       delete payload.last_name
       delete payload.suffix
+
       if (payload.event_type === 'Other' && payload.custom_event_type.trim()) {
         payload.event_type = payload.custom_event_type.trim()
       }
+
       delete payload.custom_event_type
+
       await api.createOrder(payload)
+
       setErrors({})
-      setStatus({ kind: 'ok', msg: 'Your custom order request has been submitted.' })
-      setForm({
-        prefix: '',
-        first_name: '',
-        last_name: '',
-        suffix: '',
-        customer_email: '',
-        customer_phone: '',
-        event_type: '',
-        custom_event_type: '',
-        dessert_type: '',
-        servings: '',
-        event_date: '',
-        pickup_or_delivery: 'pickup',
-        inspiration_notes: '',
-        color_theme: '',
-        flavor_preferences: ''
+      setStatus({
+        kind: 'ok',
+        msg: 'Your custom order request has been submitted.'
       })
+
+      resetForm()
     } catch (e) {
-      console.error('Order submit error', e);
-      setStatus({ kind: 'err', msg: e.message || 'Failed to submit order request.' })
+      setStatus({
+        kind: 'err',
+        msg: e.message || 'Failed to submit order request.'
+      })
     }
   }
 
