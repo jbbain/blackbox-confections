@@ -496,7 +496,7 @@ function ReviewsAdmin({ reviews, setReviews, setError }) {
       name: r.name,
       rating: r.rating,
       message: r.message,
-      approved: r.approved
+      approved: r.approved ?? r.active 
     })
   }
 
@@ -514,10 +514,16 @@ function ReviewsAdmin({ reviews, setReviews, setError }) {
     setError('')
     try {
       if (editingId) {
-        const updated = await api.updateReview(editingId, draft)
+        const updated = await api.updateReview(editingId, {
+          ...draft,
+          active: draft.approved
+        })
         setReviews((prev) => prev.map((r) => (r.id === editingId ? updated : r)))
       } else {
-        const created = await api.createReview(draft)
+        const created = await api.createReview({
+          ...draft,
+          active: draft.approved
+        })
         setReviews((prev) => [created, ...prev])
       }
       reset()
