@@ -11,7 +11,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = f"sqlite:///{_BACKEND_DIR / 'blackbox.db'}"
+    database_url: str = ""
     cors_origins: str = (
         "http://localhost:5173,"
         "http://localhost:5174,"
